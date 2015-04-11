@@ -3,10 +3,10 @@ package sigar_test
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/scalingdata/ginkgo"
+	. "github.com/scalingdata/gomega"
 
-	sigar "github.com/cloudfoundry/gosigar"
+	sigar "github.com/scalingdata/gosigar"
 )
 
 var _ = Describe("SigarWindows", func() {

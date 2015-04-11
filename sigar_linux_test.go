@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/scalingdata/ginkgo"
+	. "github.com/scalingdata/gomega"
 
-	sigar "github.com/cloudfoundry/gosigar"
+	sigar "github.com/scalingdata/gosigar"
 )
 
 var _ = Describe("sigarLinux", func() {
@@ -55,10 +55,28 @@ var _ = Describe("sigarLinux", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cpu.User).To(Equal(uint64(0)))
 			})
+			It("handles 2.6 CPU with guest stats", func() {
+				statContents := []byte("cpu 25 1 2 3 4 5 6 7 8")
+				err := ioutil.WriteFile(statFile, statContents, 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = cpu.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpu.Guest).To(Equal(uint64(8)))
+			})
+			It("handles 2.4 CPU without guest stats", func() {
+				statContents := []byte("cpu 25 1 2 3 4 5 6 7")
+				err := ioutil.WriteFile(statFile, statContents, 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = cpu.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpu.Guest).To(Equal(uint64(0)))
+			})
 		})
 
 		Describe("CollectCpuStats", func() {
-			It("collects CPU usage over time", func() {
+			It("collects CPU usage over time (2.4)", func() {
 				statContents := []byte("cpu 25 1 2 3 4 5 6 7")
 				err := ioutil.WriteFile(statFile, statContents, 0644)
 				Expect(err).ToNot(HaveOccurred())
@@ -75,6 +93,7 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(5),
 					SoftIrq: uint64(6),
 					Stolen:  uint64(7),
+					Guest:  uint64(0),
 				}))
 
 				statContents = []byte("cpu 30 3 7 10 25 55 36 65")
@@ -90,6 +109,45 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(50),
 					SoftIrq: uint64(30),
 					Stolen:  uint64(58),
+					Guest:  uint64(0),
+				}))
+
+				stop <- struct{}{}
+			})
+			It("collects CPU usage over time (2.6)", func() {
+				statContents := []byte("cpu 25 1 2 3 4 5 6 7 8")
+				err := ioutil.WriteFile(statFile, statContents, 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				concreteSigar := &sigar.ConcreteSigar{}
+				cpuUsages, stop := concreteSigar.CollectCpuStats(500 * time.Millisecond)
+
+				Expect(<-cpuUsages).To(Equal(sigar.Cpu{
+					User:    uint64(25),
+					Nice:    uint64(1),
+					Sys:     uint64(2),
+					Idle:    uint64(3),
+					Wait:    uint64(4),
+					Irq:     uint64(5),
+					SoftIrq: uint64(6),
+					Stolen:  uint64(7),
+					Guest:  uint64(8),
+				}))
+
+				statContents = []byte("cpu 30 3 7 10 25 55 36 65 88")
+				err = ioutil.WriteFile(statFile, statContents, 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(<-cpuUsages).To(Equal(sigar.Cpu{
+					User:    uint64(5),
+					Nice:    uint64(2),
+					Sys:     uint64(5),
+					Idle:    uint64(7),
+					Wait:    uint64(21),
+					Irq:     uint64(50),
+					SoftIrq: uint64(30),
+					Stolen:  uint64(58),
+					Guest:  uint64(80),
 				}))
 
 				stop <- struct{}{}

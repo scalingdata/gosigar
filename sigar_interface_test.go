@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"runtime"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	. "github.com/scalingdata/ginkgo"
+	. "github.com/scalingdata/gomega"
 
-	. "github.com/cloudfoundry/gosigar"
+	. "github.com/scalingdata/gosigar"
 )
 
 var _ = Describe("Sigar", func() {
