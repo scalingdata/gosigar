@@ -155,6 +155,58 @@ func (self *FileSystemList) Get() error {
 	return err
 }
 
+func (self *DiskList) Get() error {
+	/* List all the partitions, and check the major/minor device ID
+	   to find which are devices vs. partitions (ex. sda v. sda1) */
+	devices := make(map[string]bool)
+	diskList := make(map[string]DiskIo)
+	err := readFile(Procd+"/partitions", func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			return true
+		}
+		majorDevId, err := strtoull(fields[0])
+		if err != nil {
+			return true
+		}
+		minorDevId, err := strtoull(fields[1])
+		if err != nil {
+			return true
+		}
+		if isNotPartition(majorDevId, minorDevId) {
+			devices[fields[3]] = true
+		}
+		return true
+	})
+
+	/* Get all device stats from /proc/diskstats and filter by
+	   devices from /proc/partitions */
+	err = readFile(Procd+"/diskstats", func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) < 13 {
+			return true
+		}
+		deviceName := fields[2]
+		if _, ok := devices[deviceName]; !ok {
+			return true
+		}
+		io := DiskIo {}
+		io.ReadOps, _ = strtoull(fields[3])
+		readBytes, _ := strtoull(fields[5])
+		io.ReadBytes = readBytes * 512
+		io.ReadTimeMs, _ = strtoull(fields[6])
+		io.WriteOps, _ = strtoull(fields[7])
+		writeBytes, _ := strtoull(fields[9])
+		io.WriteBytes = writeBytes * 512
+		io.WriteTimeMs, _ = strtoull(fields[10])
+		io.IoTimeMs, _ = strtoull(fields[12])
+		diskList[deviceName] = io
+		return true
+	})
+	self.List = diskList
+	return err
+}
+
 func (self *ProcList) Get() error {
 	dir, err := os.Open(Procd)
 	if err != nil {
@@ -387,4 +439,22 @@ func readProcFile(pid int, name string) ([]byte, error) {
 	}
 
 	return contents, err
+}
+
+/* For SCSI and IDE devices, only display devices and not individual partitions.
+   For other major numbers, show all devices regardless of minor (for LVM, for example).
+   As described here: http://www.linux-tutorial.info/modules.php?name=MContent&pageid=94 */
+func isNotPartition(majorDevId, minorDevId uint64) bool {
+	if majorDevId == 3 || majorDevId == 22 ||        // IDE0_MAJOR IDE1_MAJOR
+		majorDevId == 33 || majorDevId == 34 ||  // IDE2_MAJOR IDE3_MAJOR
+		majorDevId == 56 || majorDevId == 57 ||  // IDE4_MAJOR IDE5_MAJOR
+		(majorDevId >= 88 && majorDevId <= 91) { // IDE6_MAJOR to IDE_IDE9_MAJOR
+		return (minorDevId & 0x3F) == 0 // IDE uses bottom 10 bits for partitions
+	}
+	if majorDevId == 8 || // SCSI_DISK0_MAJOR 
+		(majorDevId >= 65 && majorDevId <= 71) ||  // SCSI_DISK1_MAJOR to SCSI_DISK7_MAJOR
+		(majorDevId >= 128 && majorDevId <= 135) { // SCSI_DISK8_MAJOR to SCSI_DISK15_MAJOR
+		return (minorDevId & 0x0F) == 0 // SCSI uses bottom 8 bits for partitions
+	}
+	return true
 }

@@ -3,7 +3,7 @@ package fakes
 import (
 	"time"
 
-	sigar "github.com/cloudfoundry/gosigar"
+	sigar "github.com/scalingdata//gosigar"
 )
 
 type FakeSigar struct {

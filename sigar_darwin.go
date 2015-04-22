@@ -192,6 +192,10 @@ func (self *FileSystemList) Get() error {
 	return err
 }
 
+func (self *DiskList) Get() error {
+	return notImplemented()
+}
+
 func (self *ProcList) Get() error {
 	n := C.proc_listpids(C.PROC_ALL_PIDS, 0, nil, 0)
 	if n <= 0 {
@@ -463,5 +467,10 @@ func task_info(pid int, info *C.struct_proc_taskallinfo) error {
 		return syscall.ENOMEM
 	}
 
+	return nil
+}
+
+func notImplemented() error {
+	panic("Not Implemented")
 	return nil
 }

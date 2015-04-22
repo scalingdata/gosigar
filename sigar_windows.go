@@ -52,6 +52,10 @@ func (self *FileSystemList) Get() error {
 	return notImplemented()
 }
 
+func (self *DiskList) Get() error {
+	return notImplemented()
+}
+
 func (self *ProcList) Get() error {
 	return notImplemented()
 }
