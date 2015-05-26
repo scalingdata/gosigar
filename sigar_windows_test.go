@@ -29,4 +29,23 @@ var _ = Describe("SigarWindows", func() {
 			Ω(usage.Total).Should(BeNumerically(">", 0))
 		})
 	})
+
+	Describe("Cpu", func() {
+		It("gets CPU stats", func() {
+			cpu := sigar.Cpu{}
+			err := cpu.Get()
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(cpu.Total()).Should(BeNumerically(">", 0))
+		})
+	})
+
+	Describe("CpuList", func() {
+		It("gets CPU stats", func() {
+			cpuList := sigar.CpuList{}
+			err := cpuList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(cpuList.List[0].Total()).Should(BeNumerically(">", 0))
+		})
+	})
 })

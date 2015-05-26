@@ -8,6 +8,7 @@ import "C"
 
 import (
 	"fmt"
+	"strconv"
 	"unsafe"
 )
 
@@ -41,11 +42,65 @@ func (self *Swap) Get() error {
 }
 
 func (self *Cpu) Get() error {
-	return notImplemented()
+	cpuQueries := []string{
+		`\processor(_Total)\% idle time`,
+		`\processor(_Total)\% user time`,
+		`\processor(_Total)\% privileged time`,
+		`\processor(_Total)\% interrupt time`,
+	}
+	queryResults, err := runRawPdhQueries(cpuQueries)
+	if err != nil {
+		return err
+	}
+
+	self.populateFromPdh(queryResults)
+	return nil
 }
 
 func (self *CpuList) Get() error {
-	return notImplemented()
+	cpuQueries := []string{
+		`\processor(*)\% idle time`,
+		`\processor(*)\% user time`,
+		`\processor(*)\% privileged time`,
+		`\processor(*)\% interrupt time`,
+	}
+	// Run a PDH query for all CPU metrics
+	queryResults, err := runRawPdhArrayQueries(cpuQueries)
+	if err != nil {
+		return err
+	}
+	capacity := len(self.List)
+	if capacity == 0 {
+		capacity = 4
+	}
+	self.List = make([]Cpu, capacity)
+	for cpu, counters := range queryResults {
+		index := 0
+		if cpu == "_Total" {
+			continue
+		}
+
+		index, err := strconv.Atoi(cpu)
+		if err != nil {
+			continue
+		}
+
+		// Expand the array to accomodate this CPU id
+		for i := len(self.List); i <= index; i++ {
+			self.List = append(self.List, Cpu{})
+		}
+
+		// Populate the relevant fields
+		self.List[index].populateFromPdh(counters)
+	}
+	return nil
+}
+
+func (self *Cpu) populateFromPdh(values []uint64) {
+	self.Idle = values[0]
+	self.User = values[1]
+	self.Sys = values[2]
+	self.Irq = values[3]
 }
 
 func (self *FileSystemList) Get() error {
