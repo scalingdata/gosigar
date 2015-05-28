@@ -20,6 +20,16 @@ var _ = Describe("SigarWindows", func() {
 		})
 	})
 
+	Describe("Memory", func() {
+		It("gets the total swap", func() {
+			swap := sigar.Swap{}
+			err := swap.Get()
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(swap.Total).Should(BeNumerically(">", 0))
+		})
+	})
+
 	Describe("Disk", func() {
 		It("gets the total disk space", func() {
 			usage := sigar.FileSystemUsage{}

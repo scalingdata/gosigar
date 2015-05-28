@@ -34,11 +34,25 @@ func (self *Mem) Get() error {
 	}
 
 	self.Total = uint64(statex.ullTotalPhys)
+	self.Free = uint64(statex.ullAvailPhys)
+	self.Used = self.Total - self.Free
 	return nil
 }
 
 func (self *Swap) Get() error {
-	return notImplemented()
+	swapQueries := []string{
+		`\memory\committed bytes`,
+		`\memory\commit limit`,
+	}
+
+	queryResults, err := runRawPdhQueries(swapQueries)
+	if err != nil {
+		return err
+	}
+	self.Used = uint64(queryResults[0])
+	self.Total = uint64(queryResults[1])
+	self.Free = self.Total - self.Used
+	return nil
 }
 
 func (self *Cpu) Get() error {
