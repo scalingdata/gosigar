@@ -49,6 +49,16 @@ var _ = Describe("SigarWindows", func() {
 		})
 	})
 
+	Describe("DiskList", func() {
+		It("gets the list of attached disks", func() {
+			diskList := sigar.DiskList{}
+			err := diskList.Get()
+
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(len(diskList.List)).Should(BeNumerically(">", 0))
+		})
+	})
+
 	Describe("Cpu", func() {
 		It("gets CPU stats", func() {
 			cpu := sigar.Cpu{}

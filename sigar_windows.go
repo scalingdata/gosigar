@@ -141,7 +141,46 @@ func (self *FileSystemList) Get() error {
 }
 
 func (self *DiskList) Get() error {
-	return notImplemented()
+	/* Even though these queries are % disk time and ops / sec,
+	   we read the raw PDH counter values, not the "cooked" ones.
+	   This gives us the underlying number of ticks that would go into
+	   computing the cooked metric. */
+	diskQueries := []string{
+		`\physicaldisk(*)\disk reads/sec`,
+		`\physicaldisk(*)\disk read bytes/sec`,
+		`\physicaldisk(*)\% disk read time`,
+		`\physicaldisk(*)\disk writes/sec`,
+		`\physicaldisk(*)\disk write bytes/sec`,
+		`\physicaldisk(*)\% disk write time`,
+	}
+
+	// Run a PDH query for metrics across all physical disks
+	queryResults, err := runRawPdhArrayQueries(diskQueries)
+	if err != nil {
+		return err
+	}
+
+	self.List = make(map[string]DiskIo)
+	for disk, counters := range queryResults {
+		if disk == "_Total" {
+			continue
+		}
+
+		self.List[disk] = DiskIo{
+			ReadOps:   uint64(counters[0]),
+			ReadBytes: uint64(counters[1]),
+			// The raw counter for `% disk read time` is measured
+			// in 100ns ticks, divide by 10000 to get milliseconds
+			ReadTimeMs: uint64(counters[2] / 10000),
+			WriteOps:   uint64(counters[3]),
+			WriteBytes: uint64(counters[4]),
+			// The raw counter for `% disk write time` is measured
+			// in 100ns ticks, divide by 10000 to get milliseconds
+			WriteTimeMs: uint64(counters[5] / 10000),
+			IoTimeMs:    uint64((counters[5] + counters[2]) / 10000),
+		}
+	}
+	return nil
 }
 
 func (self *ProcList) Get() error {
