@@ -30,6 +30,15 @@ var _ = Describe("SigarWindows", func() {
 		})
 	})
 
+	Describe("FileSystemList", func() {
+		It("gets volumes", func() {
+			fsList := sigar.FileSystemList{}
+			err := fsList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(len(fsList.List)).Should(BeNumerically(">", 0))
+		})
+	})
+
 	Describe("Disk", func() {
 		It("gets the total disk space", func() {
 			usage := sigar.FileSystemUsage{}

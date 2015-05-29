@@ -117,8 +117,27 @@ func (self *Cpu) populateFromPdh(values []uint64) {
 	self.Irq = values[3]
 }
 
+// Get a list of local filesystems
+// Does not apply to SMB volumes
 func (self *FileSystemList) Get() error {
-	return notImplemented()
+	capacity := len(self.List)
+	if capacity == 0 {
+		capacity = 4
+	}
+	self.List = make([]FileSystem, capacity)
+
+	iter, err := NewWindowsVolumeIterator()
+	if err != nil {
+		return err
+	}
+
+	for iter.Next() {
+		volume := iter.Volume()
+		self.List = append(self.List, volume)
+	}
+	iter.Close()
+
+	return iter.Error()
 }
 
 func (self *DiskList) Get() error {
@@ -164,6 +183,8 @@ func (self *FileSystemUsage) Get(path string) error {
 	}
 
 	self.Total = *(*uint64)(unsafe.Pointer(&totalBytes))
+	self.Avail = *(*uint64)(unsafe.Pointer(&availableBytes))
+	self.Used = self.Total - self.Avail
 	return nil
 }
 
