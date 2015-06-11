@@ -15,7 +15,16 @@ in pure go/cgo, rather than cgo bindings for libsigar.
 
 ## Supported platforms
 
-Currently targeting modern flavors of darwin and linux.
+Feature | Linux | Darwin | Windows
+--------|-------|--------|--------
+CPU     |  yes  |   yes  |  yes
+Memory  |  yes  |   yes  |  yes
+Swap    |  yes  |   yes  |  yes
+Load Avg|  yes  |   yes  |  no
+FS Usage|  yes  |   yes  |  yes
+Disk IO |  yes  |   no   |  yes
+Uptime  |  yes  |   yes  |  no
+Process |  yes  |   yes  |  no
 
 ## License
 
