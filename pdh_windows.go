@@ -8,6 +8,42 @@ import (
 	"github.com/scalingdata/win"
 )
 
+// An error encountered calling PDH
+type PdhError struct {
+	errno uint32
+	method string
+}
+
+func (self *PdhError) Error() string {
+	return fmt.Sprintf("Error calling %v (%v): %v", self.method, self.errno, win.PdhFormatError(self.errno))
+}
+
+func NewPdhError(method string, errno uint32) *PdhError {
+	return &PdhError {
+		errno: errno,
+		method: method,
+	}
+}
+
+// An error encountered working with a specific PDH counter
+type PdhCounterError struct {
+	errno uint32
+	method string
+	query string
+}
+
+func NewPdhCounterError(method, query string, errno uint32) *PdhCounterError {
+	return &PdhCounterError {
+		errno: errno,
+		method: method,
+		query: query,
+	}
+}
+
+func (self *PdhCounterError) Error() string {
+	return fmt.Sprintf("Error calling %v on counter %v (%v): %v", self.method, self.query, self.errno, win.PdhFormatError(self.errno))
+}
+
 /* Run the set of provided queries once and report back the raw counter values for each.
    Queries must have a wildcard, like `\Processor(*)\% idle time`. Returns a map of
    wildcard values to arrays of results. The indices in the array match up with the
@@ -19,7 +55,7 @@ func runRawPdhArrayQueries(queries []string) (map[string][]uint64, error) {
 	// Open a new query
 	err := win.PdhOpenQuery(0, 0, &query)
 	if err != 0 {
-		return nil, fmt.Errorf("Error opening PDH query: %X", err)
+		return nil, NewPdhError("PdhOpenQuery", err)
 	}
 
 	// Add all of the counters. If any fail, give up.
@@ -27,7 +63,7 @@ func runRawPdhArrayQueries(queries []string) (map[string][]uint64, error) {
 		err = win.PdhAddEnglishCounter(query, queries[i], 0, &counters[i])
 		if err != 0 {
 			win.PdhCloseQuery(query)
-			return nil, fmt.Errorf("Error calling AddCounter for metric %v: %X", queries[i], err)
+			return nil, NewPdhCounterError("PdhAddEnglishCounter", queries[i], err)
 		}
 	}
 
@@ -35,7 +71,7 @@ func runRawPdhArrayQueries(queries []string) (map[string][]uint64, error) {
 	err = win.PdhCollectQueryData(query)
 	if err != 0 {
 		win.PdhCloseQuery(query)
-		return nil, fmt.Errorf("Error collecting data: %X", err)
+		return nil, NewPdhError("PdhCollectQueryData", err)
 	}
 
 	// For each query PDH will hand back an array of key-value pairs
@@ -47,13 +83,13 @@ func runRawPdhArrayQueries(queries []string) (map[string][]uint64, error) {
 		err = win.PdhGetRawCounterArray(counters[i], &bufSize, &items, nil)
 		if err != win.PDH_MORE_DATA {
 			win.PdhCloseQuery(query)
-			return nil, fmt.Errorf("Error getting raw array size: %X", err)
+			return nil, NewPdhCounterError("PdhGetRawCounterArray", queries[i], err)
 		}
 		buffer := make([]byte, bufSize)
 		err = win.PdhGetRawCounterArray(counters[i], &bufSize, &items, &buffer[0])
 		if err != 0 {
 			win.PdhCloseQuery(query)
-			return nil, fmt.Errorf("Error getting raw array: %X", err)
+			return nil, NewPdhCounterError("PdhGetRawCounterArray", queries[i], err)
 		}
 
 		counters := win.PdhConvertRawCounterArray(items, buffer)
@@ -64,7 +100,7 @@ func runRawPdhArrayQueries(queries []string) (map[string][]uint64, error) {
 	}
 	err = win.PdhCloseQuery(query)
 	if err != 0 {
-		return nil, fmt.Errorf("Error closing query: %X", err)
+		return nil, NewPdhError("PdhCloseQuery", err)
 	}
 	return results, nil
 }
@@ -80,7 +116,7 @@ func runRawPdhQueries(queries []string) ([]uint64, error) {
 	// Open a new query
 	err := win.PdhOpenQuery(0, 0, &query)
 	if err != 0 {
-		return nil, fmt.Errorf("Error opening PDH query: %X", err)
+		return nil, NewPdhError("PdhOpenQuery", err)
 	}
 
 	// Add all the counters, give up if any fail
@@ -88,7 +124,7 @@ func runRawPdhQueries(queries []string) ([]uint64, error) {
 		err = win.PdhAddEnglishCounter(query, queries[i], 0, &counters[i])
 		if err != 0 {
 			win.PdhCloseQuery(query)
-			return nil, fmt.Errorf("Error calling AddCounter for metric %v: %X", queries[i], err)
+			return nil, NewPdhCounterError("PdhAddEnglishCounter", queries[i], err)
 		}
 	}
 
@@ -96,7 +132,7 @@ func runRawPdhQueries(queries []string) ([]uint64, error) {
 	err = win.PdhCollectQueryData(query)
 	if err != 0 {
 		win.PdhCloseQuery(query)
-		return nil, fmt.Errorf("Error collecting data: %X", err)
+		return nil, NewPdhError("PdhCollectQueryData", err)
 	}
 
 	// Each query should return a single struct with a 64-bit int value
@@ -106,13 +142,13 @@ func runRawPdhQueries(queries []string) ([]uint64, error) {
 		err = win.PdhGetRawCounterValue(counters[i], &counterType, &counter)
 		if err != 0 {
 			win.PdhCloseQuery(query)
-			return nil, fmt.Errorf("Error getting raw value: %X", err)
+			return nil, NewPdhCounterError("PdhGetRawCounterValue", queries[i], err)
 		}
 		results = append(results, uint64(counter.FirstValue))
 	}
 	err = win.PdhCloseQuery(query)
 	if err != 0 {
-		return nil, fmt.Errorf("Error closing query: %X", err)
+		return nil, NewPdhError("PdhCloseQuery", err)
 	}
 	return results, nil
 }
