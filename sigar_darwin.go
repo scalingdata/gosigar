@@ -89,24 +89,7 @@ func (self *Swap) Get() error {
 }
 
 func (self *Cpu) Get() error {
-	var count C.mach_msg_type_number_t = C.HOST_CPU_LOAD_INFO_COUNT
-	var cpuload C.host_cpu_load_info_data_t
-
-	status := C.host_statistics(C.host_t(C.mach_host_self()),
-		C.HOST_CPU_LOAD_INFO,
-		C.host_info_t(unsafe.Pointer(&cpuload)),
-		&count)
-
-	if status != C.KERN_SUCCESS {
-		return fmt.Errorf("host_statistics error=%d", status)
-	}
-
-	self.User = uint64(cpuload.cpu_ticks[C.CPU_STATE_USER])
-	self.Sys = uint64(cpuload.cpu_ticks[C.CPU_STATE_SYSTEM])
-	self.Idle = uint64(cpuload.cpu_ticks[C.CPU_STATE_IDLE])
-	self.Nice = uint64(cpuload.cpu_ticks[C.CPU_STATE_NICE])
-
-	return nil
+	return notImplemented()
 }
 
 func (self *CpuList) Get() error {
@@ -229,38 +212,7 @@ func (self *ProcList) Get() error {
 }
 
 func (self *ProcState) Get(pid int) error {
-	info := C.struct_proc_taskallinfo{}
-
-	if err := task_info(pid, &info); err != nil {
-		return err
-	}
-
-	self.Name = C.GoString(&info.pbsd.pbi_comm[0])
-
-	switch info.pbsd.pbi_status {
-	case C.SIDL:
-		self.State = RunStateIdle
-	case C.SRUN:
-		self.State = RunStateRun
-	case C.SSLEEP:
-		self.State = RunStateSleep
-	case C.SSTOP:
-		self.State = RunStateStop
-	case C.SZOMB:
-		self.State = RunStateZombie
-	default:
-		self.State = RunStateUnknown
-	}
-
-	self.Ppid = int(info.pbsd.pbi_ppid)
-
-	self.Tty = int(info.pbsd.e_tdev)
-
-	self.Priority = int(info.ptinfo.pti_priority)
-
-	self.Nice = int(info.pbsd.pbi_nice)
-
-	return nil
+  return notImplemented()
 }
 
 func (self *ProcMem) Get(pid int) error {
