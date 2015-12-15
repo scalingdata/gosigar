@@ -10,6 +10,8 @@ type Sigar interface {
 	GetMem() (Mem, error)
 	GetSwap() (Swap, error)
 	GetFileSystemUsage(string) (FileSystemUsage, error)
+	GetSystemInfo() (SystemInfo, error)
+	GetSystemDistribution() (SystemDistribution, error)
 }
 
 type Cpu struct {
@@ -166,4 +168,17 @@ func (self DiskIo) Delta(other DiskIo) DiskIo {
 		WriteTimeMs: self.WriteTimeMs - other.WriteTimeMs,
 		IoTimeMs: self.IoTimeMs - other.IoTimeMs,
 	}
+}
+
+type SystemInfo struct {
+	Sysname string
+	Nodename string
+	Release string
+	Version string
+	Machine string
+	Domainname string
+}
+
+type SystemDistribution struct {
+	Description string
 }

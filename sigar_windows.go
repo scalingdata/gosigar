@@ -227,6 +227,14 @@ func (self *FileSystemUsage) Get(path string) error {
 	return nil
 }
 
+func (self *SystemInfo) Get() error {
+	return notImplemented()
+}
+
+func (self *SystemDistribution) Get() error {
+	return notImplemented()
+}
+
 func notImplemented() error {
 	panic("Not Implemented")
 	return nil

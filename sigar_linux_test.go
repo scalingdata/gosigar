@@ -359,4 +359,40 @@ major minor  #blocks  name
 			Expect(ioStat.List["sda"].IoTimeMs).To(Equal(uint64(50380)))
 		})
 	})
+
+	Describe("SystemInfo", func() {
+		var (
+			si      sigar.SystemInfo
+		)
+
+		BeforeEach(func() {
+			si = sigar.SystemInfo{}
+		})
+
+		Describe("Get", func() {
+			It("gets System Information", func() {
+				err := si.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(si.Sysname).To(Equal("Linux"))
+			})
+		})
+	})
+
+	Describe("SystemDistribution", func() {
+		var (
+			sd      sigar.SystemDistribution
+		)
+
+		BeforeEach(func() {
+			sd = sigar.SystemDistribution{}
+		})
+
+		Describe("Get", func() {
+			It("gets System Distribution", func() {
+				err := sd.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(sd.Description).ToNot(Equal(""))
+			})
+		})
+	})
 })

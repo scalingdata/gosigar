@@ -458,3 +458,13 @@ func isNotPartition(majorDevId, minorDevId uint64) bool {
 	}
 	return true
 }
+
+func (self *SystemDistribution) Get() error {
+	b, err := ioutil.ReadFile("/etc/redhat-release")
+	if err != nil {
+		return err
+	}
+
+	self.Description = string(b)
+	return nil
+}

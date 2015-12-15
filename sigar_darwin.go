@@ -422,6 +422,11 @@ func task_info(pid int, info *C.struct_proc_taskallinfo) error {
 	return nil
 }
 
+func (self *SystemDistribution) Get() error {
+	self.Description = "Mac OS X"
+	return nil
+}
+
 func notImplemented() error {
 	panic("Not Implemented")
 	return nil
