@@ -422,6 +422,12 @@ func task_info(pid int, info *C.struct_proc_taskallinfo) error {
 	return nil
 }
 
+func (self *SystemInfo) Get() error {
+	self.Sysname = "Darwin"
+
+	return nil
+}
+
 func (self *SystemDistribution) Get() error {
 	self.Description = "Mac OS X"
 	return nil

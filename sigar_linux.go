@@ -459,6 +459,22 @@ func isNotPartition(majorDevId, minorDevId uint64) bool {
 	return true
 }
 
+func (self *SystemInfo) Get() error {
+	var uname syscall.Utsname
+	err := syscall.Uname(&uname)
+	if err != nil {
+		return err
+	}
+	self.Sysname = bytePtrToString(&uname.Sysname[0])
+	self.Nodename = bytePtrToString(&uname.Nodename[0])
+	self.Release = bytePtrToString(&uname.Release[0])
+	self.Version = bytePtrToString(&uname.Version[0])
+	self.Machine = bytePtrToString(&uname.Machine[0])
+	self.Domainname = bytePtrToString(&uname.Domainname[0])
+
+	return nil
+}
+
 func (self *SystemDistribution) Get() error {
 	b, err := ioutil.ReadFile("/etc/redhat-release")
 	if err != nil {

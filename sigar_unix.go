@@ -24,19 +24,3 @@ func (self *FileSystemUsage) Get(path string) error {
 
 	return nil
 }
-
-func (self *SystemInfo) Get() error {
-	var uname syscall.Utsname
-	err := syscall.Uname(&uname)
-	if err != nil {
-		return err
-	}
-	self.Sysname = bytePtrToString(&uname.Sysname[0])
-	self.Nodename = bytePtrToString(&uname.Nodename[0])
-	self.Release = bytePtrToString(&uname.Release[0])
-	self.Version = bytePtrToString(&uname.Version[0])
-	self.Machine = bytePtrToString(&uname.Machine[0])
-	self.Domainname = bytePtrToString(&uname.Domainname[0])
-
-	return nil
-}
