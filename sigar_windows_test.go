@@ -77,4 +77,22 @@ var _ = Describe("SigarWindows", func() {
 			Ω(cpuList.List[0].Total()).Should(BeNumerically(">", 0))
 		})
 	})
+
+	Describe("SystemInfo", func() {
+		It("gets system info", func() {
+			si := sigar.SystemInfo{}
+			err := si.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(si.Sysname).Should(Equal("Windows"))
+		})
+	})
+
+	Describe("SystemDistribution", func() {
+		It("gets system distribution", func() {
+			sd := sigar.SystemDistribution{}
+			err := sd.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(sd.Description).Should(Equal("Windows"))
+		})
+	})
 })

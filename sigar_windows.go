@@ -228,11 +228,13 @@ func (self *FileSystemUsage) Get(path string) error {
 }
 
 func (self *SystemInfo) Get() error {
-	return notImplemented()
+	self.Sysname = "Windows"
+	return nil
 }
 
 func (self *SystemDistribution) Get() error {
-	return notImplemented()
+	self.Description = "Windows"
+	return nil
 }
 
 func notImplemented() error {
