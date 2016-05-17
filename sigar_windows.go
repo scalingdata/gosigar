@@ -87,7 +87,7 @@ func (self *CpuList) Get() error {
 	if capacity == 0 {
 		capacity = 4
 	}
-	self.List = make([]Cpu, capacity)
+	self.List = make([]Cpu, 0, capacity)
 	for cpu, counters := range queryResults {
 		index := 0
 		if cpu == "_Total" {
