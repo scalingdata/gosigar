@@ -27,7 +27,10 @@ func init() {
 
 	Procd = "/proc"
 	Sysd = "/sys"
+	LoadStartTime()
+}
 
+func LoadStartTime() {
 	// grab system boot time
 	readFile(Procd+"/stat", func(line string) bool {
 		if strings.HasPrefix(line, "btime") {
@@ -323,6 +326,28 @@ func (self *ProcList) Get() error {
 	return nil
 }
 
+func (self *ProcIo) Get(pid int) error {
+	assignMap := map[string]*uint64{
+		"syscr:":       &self.ReadOps,
+		"syscw:":       &self.WriteOps,
+		"read_bytes:":  &self.ReadBytes,
+		"write_bytes:": &self.WriteBytes,
+	}
+	err := readFile(fmt.Sprintf("%v/%v/io", Procd, pid), func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return true
+		}
+		val, ok := assignMap[fields[0]]
+		if !ok {
+			return true
+		}
+		*val, _ = strtoull(fields[1])
+		return true
+	})
+	return err
+}
+
 func (self *ProcState) Get(pid int) error {
 	contents, err := readProcFile(pid, "stat")
 	if err != nil {
@@ -513,7 +538,6 @@ func procFileName(pid int, name string) string {
 func readProcFile(pid int, name string) ([]byte, error) {
 	path := procFileName(pid, name)
 	contents, err := ioutil.ReadFile(path)
-
 	if err != nil {
 		if perr, ok := err.(*os.PathError); ok {
 			if perr.Err == syscall.ENOENT {
