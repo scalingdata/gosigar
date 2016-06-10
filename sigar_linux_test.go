@@ -490,4 +490,118 @@ Inter-|   Receive                                                |  Transmit
 			})
 		})
 	})
+
+	Describe("Process", func() {
+		It("GetsProcessList", func() {
+			err := os.MkdirAll(procd+"/stat", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+
+			procList := &sigar.ProcList{}
+			err = procList.Get()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(procList.List)).To(Equal(1))
+			Expect(procList.List[0]).To(Equal(10))
+		})
+
+		It("GetsArgs", func() {
+			cmdLineFile := procd + "/10/cmdline"
+			cmdLine := "/sbin/min\x00getty\x00/dev/tty3\x00"
+			err := os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(cmdLineFile, []byte(cmdLine), 0444)
+
+			procArgs := &sigar.ProcArgs{}
+			err = procArgs.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procArgs.List).To(Equal([]string{"/sbin/min", "getty", "/dev/tty3"}))
+		})
+
+		It("GetsProcessState", func() {
+			statFile := procd + "/10/stat"
+			statLine := "10 (watchdog/1) S 2 0 0 11 -1 2216722752 0 0 0 0 0 142 0 0 -100 0 1 0 4 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 1 99 1 0 0 0"
+			err := os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(statFile, []byte(statLine), 0444)
+
+			procState := &sigar.ProcState{}
+			err = procState.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procState.Name).To(Equal("watchdog/1"))
+			Expect(procState.State).To(Equal(sigar.RunState(sigar.RunStateSleep)))
+			Expect(procState.Ppid).To(Equal(int(2)))
+			Expect(procState.Tty).To(Equal(int(11)))
+			Expect(procState.Priority).To(Equal(int(-100)))
+			Expect(procState.Nice).To(Equal(int(0)))
+			Expect(procState.Processor).To(Equal(int(1)))
+		})
+
+		It("GetsProcessTime", func() {
+			statFile := procd + "/10/stat"
+			statLine := "10 (watchdog/1) S 2 0 0 11 -1 2216722752 0 0 0 0 0 142 0 0 -100 0 1 0 4 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 1 99 1 0 0 0"
+			err := os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(statFile, []byte(statLine), 0444)
+
+			procTime := &sigar.ProcTime{}
+			err = procTime.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procTime.User).To(Equal(uint64(0)))
+			Expect(procTime.Sys).To(Equal(uint64(1420)))
+			Expect(procTime.Total).To(Equal(uint64(1420)))
+			Expect(procTime.StartTime).To(Equal(uint64(1465314458000)))
+		})
+
+		It("GetsProcessMemory", func() {
+			statFile := procd + "/10/stat"
+			statLine := "10 (watchdog/1) S 2 0 0 11 -1 2216722752 0 64 128 256 0 142 0 0 -100 0 1 0 4 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 1 99 1 0 0 0"
+			statmFile := procd + "/10/statm"
+			statmLine := "63831 465 293 89 0 56957 0"
+			err := os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(statFile, []byte(statLine), 0444)
+			err = ioutil.WriteFile(statmFile, []byte(statmLine), 0444)
+
+			procMem := &sigar.ProcMem{}
+			err = procMem.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procMem.Size).To(Equal(uint64(261451776)))
+			Expect(procMem.Resident).To(Equal(uint64(1904640)))
+			Expect(procMem.Share).To(Equal(uint64(1200128)))
+			Expect(procMem.MinorFaults).To(Equal(uint64(64)))
+			Expect(procMem.MajorFaults).To(Equal(uint64(256)))
+			Expect(procMem.PageFaults).To(Equal(uint64(320)))
+		})
+
+		It("GetsProcessIo", func() {
+			ioFile := procd + "/10/io"
+			ioFileContents := `
+rchar: 5811
+wchar: 949188
+syscr: 4
+syscw: 4053
+read_bytes: 12288
+write_bytes: 5365760
+cancelled_write_bytes: 0
+`
+			err := os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(ioFile, []byte(ioFileContents), 0444)
+
+			procIo := &sigar.ProcIo{}
+			err = procIo.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procIo.ReadOps).To(Equal(uint64(4)))
+			Expect(procIo.WriteOps).To(Equal(uint64(4053)))
+			Expect(procIo.ReadBytes).To(Equal(uint64(12288)))
+			Expect(procIo.WriteBytes).To(Equal(uint64(5365760)))
+		})
+	})
 })

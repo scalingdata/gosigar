@@ -323,6 +323,28 @@ func (self *ProcList) Get() error {
 	return nil
 }
 
+func (self *ProcIo) Get(pid int) error {
+	assignMap := map[string]*uint64{
+		"syscr:":       &self.ReadOps,
+		"syscw:":       &self.WriteOps,
+		"read_bytes:":  &self.ReadBytes,
+		"write_bytes:": &self.WriteBytes,
+	}
+	err := readFile(fmt.Sprintf("%v/%v/io", Procd, pid), func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return true
+		}
+		val, ok := assignMap[fields[0]]
+		if !ok {
+			return true
+		}
+		*val, _ = strtoull(fields[1])
+		return true
+	})
+	return err
+}
+
 func (self *ProcState) Get(pid int) error {
 	contents, err := readProcFile(pid, "stat")
 	if err != nil {

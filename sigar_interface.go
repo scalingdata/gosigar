@@ -148,6 +148,13 @@ type ProcState struct {
 	Processor int
 }
 
+type ProcIo struct {
+	ReadBytes  uint64
+	WriteBytes uint64
+	ReadOps    uint64
+	WriteOps   uint64
+}
+
 type ProcMem struct {
 	Size        uint64
 	Resident    uint64
