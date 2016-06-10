@@ -41,7 +41,7 @@ func (cpu Cpu) Delta(other Cpu) Cpu {
 		Irq:     cpu.Irq - other.Irq,
 		SoftIrq: cpu.SoftIrq - other.SoftIrq,
 		Stolen:  cpu.Stolen - other.Stolen,
-		Guest:  cpu.Guest - other.Guest,
+		Guest:   cpu.Guest - other.Guest,
 	}
 }
 
@@ -91,6 +91,36 @@ type FileSystemUsage struct {
 	Avail     uint64
 	Files     uint64
 	FreeFiles uint64
+}
+
+type NetIface struct {
+	Name       string
+	MTU        uint64
+	Mac        string
+	LinkStatus string
+
+	SendBytes      uint64
+	RecvBytes      uint64
+	SendPackets    uint64
+	RecvPackets    uint64
+	SendCompressed uint64
+	RecvCompressed uint64
+	RecvMulticast  uint64
+
+	SendErrors     uint64
+	RecvErrors     uint64
+	SendDropped    uint64
+	RecvDropped    uint64
+	SendFifoErrors uint64
+	RecvFifoErrors uint64
+
+	RecvFramingErrors uint64
+	SendCarrier       uint64
+	SendCollisions    uint64
+}
+
+type NetIfaceList struct {
+	List []NetIface
 }
 
 type ProcList struct {
@@ -149,33 +179,33 @@ type DiskList struct {
 }
 
 type DiskIo struct {
-	ReadOps uint64
-	ReadBytes uint64
-	ReadTimeMs uint64
-	WriteOps uint64
-	WriteBytes uint64
+	ReadOps     uint64
+	ReadBytes   uint64
+	ReadTimeMs  uint64
+	WriteOps    uint64
+	WriteBytes  uint64
 	WriteTimeMs uint64
-	IoTimeMs uint64
+	IoTimeMs    uint64
 }
 
 func (self DiskIo) Delta(other DiskIo) DiskIo {
-	return DiskIo {
-		ReadOps: self.ReadOps - other.ReadOps,
-		ReadBytes: self.ReadBytes - other.ReadBytes,
-		ReadTimeMs: self.ReadTimeMs - other.ReadTimeMs,
-		WriteOps: self.WriteOps - other.WriteOps,
-		WriteBytes: self.WriteBytes - other.WriteBytes,
+	return DiskIo{
+		ReadOps:     self.ReadOps - other.ReadOps,
+		ReadBytes:   self.ReadBytes - other.ReadBytes,
+		ReadTimeMs:  self.ReadTimeMs - other.ReadTimeMs,
+		WriteOps:    self.WriteOps - other.WriteOps,
+		WriteBytes:  self.WriteBytes - other.WriteBytes,
 		WriteTimeMs: self.WriteTimeMs - other.WriteTimeMs,
-		IoTimeMs: self.IoTimeMs - other.IoTimeMs,
+		IoTimeMs:    self.IoTimeMs - other.IoTimeMs,
 	}
 }
 
 type SystemInfo struct {
-	Sysname string
-	Nodename string
-	Release string
-	Version string
-	Machine string
+	Sysname    string
+	Nodename   string
+	Release    string
+	Version    string
+	Machine    string
 	Domainname string
 }
 

@@ -2,6 +2,7 @@ package sigar_test
 
 import (
 	"io/ioutil"
+	"os"
 	"time"
 
 	. "github.com/scalingdata/ginkgo"
@@ -12,16 +13,22 @@ import (
 
 var _ = Describe("sigarLinux", func() {
 	var procd string
+	var sysd string
 
 	BeforeEach(func() {
 		var err error
 		procd, err = ioutil.TempDir("", "sigarTests")
 		Expect(err).ToNot(HaveOccurred())
+		sysd, err = ioutil.TempDir("", "sigarTests")
+		Expect(err).ToNot(HaveOccurred())
+
 		sigar.Procd = procd
+		sigar.Sysd = sysd
 	})
 
 	AfterEach(func() {
 		sigar.Procd = "/proc"
+		sigar.Sysd = "/sys"
 	})
 
 	Describe("CPU", func() {
@@ -93,7 +100,7 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(5),
 					SoftIrq: uint64(6),
 					Stolen:  uint64(7),
-					Guest:  uint64(0),
+					Guest:   uint64(0),
 				}))
 
 				statContents = []byte("cpu 30 3 7 10 25 55 36 65")
@@ -109,7 +116,7 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(50),
 					SoftIrq: uint64(30),
 					Stolen:  uint64(58),
-					Guest:  uint64(0),
+					Guest:   uint64(0),
 				}))
 
 				stop <- struct{}{}
@@ -131,7 +138,7 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(5),
 					SoftIrq: uint64(6),
 					Stolen:  uint64(7),
-					Guest:  uint64(8),
+					Guest:   uint64(8),
 				}))
 
 				statContents = []byte("cpu 30 3 7 10 25 55 36 65 88")
@@ -147,7 +154,7 @@ var _ = Describe("sigarLinux", func() {
 					Irq:     uint64(50),
 					SoftIrq: uint64(30),
 					Stolen:  uint64(58),
-					Guest:  uint64(80),
+					Guest:   uint64(80),
 				}))
 
 				stop <- struct{}{}
@@ -294,7 +301,7 @@ major minor  #blocks  name
    8        2   41430016 sda2
  253        0   40476672 dm-0
  253        1     950272 dm-1
-` 
+`
 			diskstatFile = procd + "/diskstats"
 			diskstatContents := `
    1       0 ram0 0 0 0 0 0 0 0 0 0 0 0
@@ -326,12 +333,12 @@ major minor  #blocks  name
    8       2 sda2 6375 1271 230290 6161 77130 814999 7149432 1395024 0 48563 1401264
  253       0 dm-0 7255 0 226842 8638 895753 0 7149432 40185506 0 50361 40194137
  253       1 dm-1 307 0 2456 116 0 0 0 0 0 116 116
-`		
+`
 			err := ioutil.WriteFile(partitionsFile, []byte(partitionsContents), 0444)
-			Expect(err).ToNot(HaveOccurred()) 
+			Expect(err).ToNot(HaveOccurred())
 
 			err = ioutil.WriteFile(diskstatFile, []byte(diskstatContents), 0444)
-			Expect(err).ToNot(HaveOccurred()) 
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("skips non-block devices", func() {
@@ -360,9 +367,97 @@ major minor  #blocks  name
 		})
 	})
 
+	Describe("NetIface", func() {
+		var netDevFile string
+		BeforeEach(func() {
+			netDevFile = procd + "/net/dev"
+			netDevContents := `
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:   32814     457    7    4    3     8          0         2   32814      457    0    8    0    78       1          8
+  eth0: 14071306   63882   25  100    4  1000         10         0  3729191   37066    7    0   11    20       0          9
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(netDevFile, []byte(netDevContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			netEth0MtuFile := sysd + "/class/net/eth0/mtu"
+			netEth0AddrFile := sysd + "/class/net/eth0/address"
+			netEth0CarrierFile := sysd + "/class/net/eth0/carrier"
+			mtu := "1500"
+			address := "08:00:27:6b:1c:dd"
+			linkStat := "1"
+
+			err = os.MkdirAll(sysd+"/class/net/eth0/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(netEth0MtuFile, []byte(mtu), 0444)
+			err = ioutil.WriteFile(netEth0AddrFile, []byte(address), 0444)
+			err = ioutil.WriteFile(netEth0CarrierFile, []byte(linkStat), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+		})
+
+		It("parses network interface stats", func() {
+			netStat := sigar.NetIfaceList{}
+			err := netStat.Get()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(netStat.List[0].Name).To(Equal("lo"))
+			Expect(netStat.List[0].SendBytes).To(Equal(uint64(32814)))
+			Expect(netStat.List[0].RecvBytes).To(Equal(uint64(32814)))
+			Expect(netStat.List[0].SendPackets).To(Equal(uint64(457)))
+			Expect(netStat.List[0].RecvPackets).To(Equal(uint64(457)))
+			Expect(netStat.List[0].SendCompressed).To(Equal(uint64(8)))
+			Expect(netStat.List[0].RecvCompressed).To(Equal(uint64(0)))
+			Expect(netStat.List[0].RecvMulticast).To(Equal(uint64(2)))
+			Expect(netStat.List[0].SendErrors).To(Equal(uint64(0)))
+			Expect(netStat.List[0].RecvErrors).To(Equal(uint64(7)))
+			Expect(netStat.List[0].SendDropped).To(Equal(uint64(8)))
+			Expect(netStat.List[0].RecvDropped).To(Equal(uint64(4)))
+			Expect(netStat.List[0].SendFifoErrors).To(Equal(uint64(0)))
+			Expect(netStat.List[0].RecvFifoErrors).To(Equal(uint64(3)))
+			Expect(netStat.List[0].RecvFramingErrors).To(Equal(uint64(8)))
+			Expect(netStat.List[0].SendCarrier).To(Equal(uint64(1)))
+			Expect(netStat.List[0].SendCollisions).To(Equal(uint64(78)))
+
+			Expect(netStat.List[1].Name).To(Equal("eth0"))
+			Expect(netStat.List[1].SendBytes).To(Equal(uint64(3729191)))
+			Expect(netStat.List[1].RecvBytes).To(Equal(uint64(14071306)))
+			Expect(netStat.List[1].SendPackets).To(Equal(uint64(37066)))
+			Expect(netStat.List[1].RecvPackets).To(Equal(uint64(63882)))
+			Expect(netStat.List[1].SendCompressed).To(Equal(uint64(9)))
+			Expect(netStat.List[1].RecvCompressed).To(Equal(uint64(10)))
+			Expect(netStat.List[1].RecvMulticast).To(Equal(uint64(0)))
+			Expect(netStat.List[1].SendErrors).To(Equal(uint64(7)))
+			Expect(netStat.List[1].RecvErrors).To(Equal(uint64(25)))
+			Expect(netStat.List[1].SendDropped).To(Equal(uint64(0)))
+			Expect(netStat.List[1].RecvDropped).To(Equal(uint64(100)))
+			Expect(netStat.List[1].SendFifoErrors).To(Equal(uint64(11)))
+			Expect(netStat.List[1].RecvFifoErrors).To(Equal(uint64(4)))
+			Expect(netStat.List[1].RecvFramingErrors).To(Equal(uint64(1000)))
+			Expect(netStat.List[1].SendCarrier).To(Equal(uint64(0)))
+			Expect(netStat.List[1].SendCollisions).To(Equal(uint64(20)))
+		})
+
+		It("parses network interface info when available", func() {
+			netStat := sigar.NetIfaceList{}
+			err := netStat.Get()
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(netStat.List[0].MTU).To(Equal(uint64(0)))
+			Expect(netStat.List[0].Mac).To(Equal(""))
+			Expect(netStat.List[0].LinkStatus).To(Equal(""))
+
+			Expect(netStat.List[1].MTU).To(Equal(uint64(1500)))
+			Expect(netStat.List[1].Mac).To(Equal("08:00:27:6b:1c:dd"))
+			Expect(netStat.List[1].LinkStatus).To(Equal("UP"))
+		})
+	})
+
 	Describe("SystemInfo", func() {
 		var (
-			si      sigar.SystemInfo
+			si sigar.SystemInfo
 		)
 
 		BeforeEach(func() {
@@ -380,7 +475,7 @@ major minor  #blocks  name
 
 	Describe("SystemDistribution", func() {
 		var (
-			sd      sigar.SystemDistribution
+			sd sigar.SystemDistribution
 		)
 
 		BeforeEach(func() {

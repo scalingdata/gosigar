@@ -5,6 +5,7 @@ package sigar
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -19,11 +20,13 @@ var system struct {
 }
 
 var Procd string
+var Sysd string
 
 func init() {
 	system.ticks = 100 // C.sysconf(C._SC_CLK_TCK)
 
 	Procd = "/proc"
+	Sysd = "/sys"
 
 	// grab system boot time
 	readFile(Procd+"/stat", func(line string) bool {
@@ -129,6 +132,87 @@ func (self *CpuList) Get() error {
 	return err
 }
 
+func (self *NetIfaceList) Get() error {
+	capacity := len(self.List)
+	if capacity == 0 {
+		capacity = 10
+	}
+	ifaceList := make([]NetIface, 0, capacity)
+
+	// Interface metrics come from `/proc/net/dev`
+	err := readFile(Procd+"/net/dev", func(line string) bool {
+		fields := strings.Fields(strings.TrimLeft(line, " \t"))
+		if len(fields) == 0 {
+			return true
+		}
+
+		// Interface names end with a colon, otherwise this is the header
+		ifaceName := fields[0]
+		if ifaceName[len(ifaceName)-1] != ':' {
+			return true
+		}
+
+		if len(fields) != 17 {
+			return true
+		}
+
+		iface := NetIface{}
+		iface.Name = ifaceName[:len(ifaceName)-1]
+		iface.SendBytes, _ = strtoull(fields[9])
+		iface.RecvBytes, _ = strtoull(fields[1])
+		iface.SendPackets, _ = strtoull(fields[10])
+		iface.RecvPackets, _ = strtoull(fields[2])
+		iface.SendCompressed, _ = strtoull(fields[16])
+		iface.RecvCompressed, _ = strtoull(fields[7])
+		iface.RecvMulticast, _ = strtoull(fields[8])
+
+		iface.SendErrors, _ = strtoull(fields[11])
+		iface.RecvErrors, _ = strtoull(fields[3])
+		iface.SendDropped, _ = strtoull(fields[12])
+		iface.RecvDropped, _ = strtoull(fields[4])
+		iface.SendFifoErrors, _ = strtoull(fields[13])
+		iface.RecvFifoErrors, _ = strtoull(fields[5])
+
+		iface.RecvFramingErrors, _ = strtoull(fields[6])
+		iface.SendCarrier, _ = strtoull(fields[15])
+		iface.SendCollisions, _ = strtoull(fields[14])
+
+		ifaceList = append(ifaceList, iface)
+
+		return true
+	})
+
+	// Try to get MTU, MAC address and physical link status
+	// This will only work on 2.6 kernels and above - see https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-net
+	for i := range ifaceList {
+		mtuFile := fmt.Sprintf("%v/class/net/%v/mtu", Sysd, ifaceList[i].Name)
+		macFile := fmt.Sprintf("%v/class/net/%v/address", Sysd, ifaceList[i].Name)
+		linkStatFile := fmt.Sprintf("%v/class/net/%v/carrier", Sysd, ifaceList[i].Name)
+		mtu, err := ioutil.ReadFile(mtuFile)
+		if err == nil {
+			ifaceList[i].MTU, _ = strtoull(string(mtu))
+		}
+		macAddr, err := ioutil.ReadFile(macFile)
+		if err == nil {
+			ifaceList[i].Mac = string(macAddr)
+		}
+		linkStat, err := ioutil.ReadFile(linkStatFile)
+		if err == nil {
+			switch string(linkStat) {
+			case "0":
+				ifaceList[i].LinkStatus = "DOWN"
+			case "1":
+				ifaceList[i].LinkStatus = "UP"
+			default:
+				ifaceList[i].LinkStatus = "UNKNOWN"
+			}
+		}
+	}
+
+	self.List = ifaceList
+	return err
+}
+
 func (self *FileSystemList) Get() error {
 	capacity := len(self.List)
 	if capacity == 0 {
@@ -190,7 +274,7 @@ func (self *DiskList) Get() error {
 		if _, ok := devices[deviceName]; !ok {
 			return true
 		}
-		io := DiskIo {}
+		io := DiskIo{}
 		io.ReadOps, _ = strtoull(fields[3])
 		readBytes, _ := strtoull(fields[5])
 		io.ReadBytes = readBytes * 512
@@ -391,7 +475,7 @@ func parseCpuStat(self *Cpu, line string) error {
 	self.Stolen, _ = strtoull(fields[8])
 	/* Guest was added in 2.6, not available on all kernels */
 	if len(fields) > 9 {
-	  self.Guest, _ = strtoull(fields[9])
+		self.Guest, _ = strtoull(fields[9])
 	}
 
 	return nil
@@ -445,14 +529,14 @@ func readProcFile(pid int, name string) ([]byte, error) {
    For other major numbers, show all devices regardless of minor (for LVM, for example).
    As described here: http://www.linux-tutorial.info/modules.php?name=MContent&pageid=94 */
 func isNotPartition(majorDevId, minorDevId uint64) bool {
-	if majorDevId == 3 || majorDevId == 22 ||        // IDE0_MAJOR IDE1_MAJOR
-		majorDevId == 33 || majorDevId == 34 ||  // IDE2_MAJOR IDE3_MAJOR
-		majorDevId == 56 || majorDevId == 57 ||  // IDE4_MAJOR IDE5_MAJOR
+	if majorDevId == 3 || majorDevId == 22 || // IDE0_MAJOR IDE1_MAJOR
+		majorDevId == 33 || majorDevId == 34 || // IDE2_MAJOR IDE3_MAJOR
+		majorDevId == 56 || majorDevId == 57 || // IDE4_MAJOR IDE5_MAJOR
 		(majorDevId >= 88 && majorDevId <= 91) { // IDE6_MAJOR to IDE_IDE9_MAJOR
 		return (minorDevId & 0x3F) == 0 // IDE uses bottom 10 bits for partitions
 	}
-	if majorDevId == 8 || // SCSI_DISK0_MAJOR 
-		(majorDevId >= 65 && majorDevId <= 71) ||  // SCSI_DISK1_MAJOR to SCSI_DISK7_MAJOR
+	if majorDevId == 8 || // SCSI_DISK0_MAJOR
+		(majorDevId >= 65 && majorDevId <= 71) || // SCSI_DISK1_MAJOR to SCSI_DISK7_MAJOR
 		(majorDevId >= 128 && majorDevId <= 135) { // SCSI_DISK8_MAJOR to SCSI_DISK15_MAJOR
 		return (minorDevId & 0x0F) == 0 // SCSI uses bottom 8 bits for partitions
 	}
