@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -211,6 +212,146 @@ func (self *NetIfaceList) Get() error {
 
 	self.List = ifaceList
 	return err
+}
+
+func (self *NetTcpConnList) Get() error {
+	list, err := readConnList(Procd+"/net/tcp", 4, 17)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+func (self *NetUdpConnList) Get() error {
+	list, err := readConnList(Procd+"/net/udp", 4, 13)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+func (self *NetRawConnList) Get() error {
+	list, err := readConnList(Procd+"/net/raw", 4, 13)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+func (self *NetTcpV6ConnList) Get() error {
+	list, err := readConnList(Procd+"/net/tcp6", 16, 17)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+func (self *NetUdpV6ConnList) Get() error {
+	list, err := readConnList(Procd+"/net/udp6", 16, 13)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+func (self *NetRawV6ConnList) Get() error {
+	list, err := readConnList(Procd+"/net/raw6", 16, 13)
+	if err != nil {
+		return err
+	}
+	self.List = list
+	return nil
+}
+
+/* Reads the format of the /proc/net/<proto> files, which have 2 header lines and a
+   list of open connections. Different protocols have different numbers of trailing fields,
+   but the first 5 are the same. */
+func readConnList(listFile string, ipSizeBytes, numFields int) ([]NetConn, error) {
+	connList := make([]NetConn, 0)
+	err := readFile(listFile, func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) != numFields {
+			return true
+		}
+		// Skip the header, only take lines where the first field is <number>:
+		if fields[0][len(fields[0])-1] != ':' {
+			return true
+		}
+
+		var err error
+		var conn NetConn
+		conn.LocalAddr, conn.LocalPort, err = readConnIp(fields[1], ipSizeBytes)
+		if err != nil {
+			return true
+		}
+
+		conn.RemoteAddr, conn.RemotePort, err = readConnIp(fields[2], ipSizeBytes)
+		if err != nil {
+			return true
+		}
+
+		status, err := strconv.ParseInt(fields[3], 16, 8)
+		if err != nil {
+			return true
+		}
+
+		conn.Status = NetConnState(status)
+		queues := strings.Split(fields[4], ":")
+		if len(queues) != 2 {
+			return true
+		}
+
+		conn.SendQueue, err = strtoull(queues[0])
+		if err != nil {
+			return true
+		}
+
+		conn.RecvQueue, err = strtoull(queues[1])
+		if err != nil {
+			return true
+		}
+
+		connList = append(connList, conn)
+		return true
+	})
+	return connList, err
+}
+
+/* Decode an IP:port pair, with either a 16-byte or 4-byte IP as specified by lenBytes
+   encoded in network order as hexidecimal characters ex. 0100007F -> 127.0.0.1 */
+func readConnIp(field string, lenBytes int) (net.IP, uint64, error) {
+	parts := strings.Split(field, ":")
+	if len(parts) != 2 {
+		return nil, 0, fmt.Errorf("Unable to split into IP and port")
+	}
+	if len(parts[0]) != lenBytes*2 {
+		return nil, 0, fmt.Errorf("Unable to parse IP, expected %v bytes got %v", lenBytes, len(parts[0]))
+	}
+	var port int64
+	var err error
+
+	port, err = strconv.ParseInt(parts[1], 16, 64)
+	if err != nil {
+		return nil, 0, fmt.Errorf("Unable to parse port, %v - %v", parts[1], err)
+	}
+
+	ip := make([]byte, lenBytes)
+	// For IPv6 the words are in order, but the bytes of the words are little-endian
+	for i := 0; i < lenBytes; i += 4 {
+		for j := 0; j < 4; j++ {
+			byteVal, err := strconv.ParseInt(parts[0][(j+i)*2:(j+i+1)*2], 16, 8)
+			if err != nil {
+				return nil, 0, fmt.Errorf("Unable to parse IP, %v - %v", parts[0], err)
+			}
+			ip[i+(3-j)] = byte(byteVal)
+		}
+	}
+	return net.IP(ip), uint64(port), nil
 }
 
 func (self *FileSystemList) Get() error {

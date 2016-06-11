@@ -2,6 +2,7 @@ package sigar_test
 
 import (
 	"io/ioutil"
+	"net"
 	"os"
 	"time"
 
@@ -452,6 +453,189 @@ Inter-|   Receive                                                |  Transmit
 			Expect(netStat.List[1].MTU).To(Equal(uint64(1500)))
 			Expect(netStat.List[1].Mac).To(Equal("08:00:27:6b:1c:dd"))
 			Expect(netStat.List[1].LinkStatus).To(Equal("UP"))
+		})
+	})
+
+	Describe("NetConn", func() {
+		It("parses TCP IPv4", func() {
+			connFile := procd + "/net/tcp"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+   0: 00000000:0016 00000000:0000 0A 00000000:00000123 00:00000000 00000000     0        0 12095 1 ffff880296063500 99 0 0 10 -1                     
+   3: 0F02000A:0016 0202000A:E78C 01 00000490:00000000 02:00050277 00000000     0        0 95158 3 ffff880297be4e80 20 5 25 10 -1                    
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetTcpConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(2))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(22)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateListen))
+
+			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
+			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{10, 0, 2, 2}))
+			Expect(connList.List[1].LocalPort).To(Equal(uint64(22)))
+			Expect(connList.List[1].RemotePort).To(Equal(uint64(59276)))
+			Expect(connList.List[1].SendQueue).To(Equal(uint64(490)))
+			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
+			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
+		})
+
+		It("parses UDP IPv4", func() {
+			connFile := procd + "/net/udp"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+  19: 00000000:0044 00000000:0000 07 00000000:00000123 00:00000000 00000000     0        0 180235 2 ffff880297434080 0         
+  62: 0F02000A:006F 00000000:0000 07 00000490:00000000 00:00000000 00000000     0        0 11060 2 ffff880296c92ac0 0 
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetUdpConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(2))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(68)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+
+			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
+			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[1].LocalPort).To(Equal(uint64(111)))
+			Expect(connList.List[1].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[1].SendQueue).To(Equal(uint64(490)))
+			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
+			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateClose))
+		})
+
+		It("parses raw IPv4", func() {
+			connFile := procd + "/net/raw"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+   1: 00000000:0001 00000000:0000 07 00000011:00000540 00:00000000 00000000     0        0 201340 2 ffff88029af250c0 0
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetRawConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(1))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(1)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(11)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(540)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+		})
+
+		It("parses TCP IPv6", func() {
+			connFile := procd + "/net/tcp6"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+   2: 00000000000000000000000001000000:9E32 00000000000000000000000001000000:0955 06 00000128:00000512 03:000015ED 00000000     0        0 0 3 ffff88029741cd00 99 0 0 2 -1
+   3: 00000000000000000000000001000000:0955 00000000000000000000000001000000:9E32 06 00007890:00000111 03:000015ED 00000000     0        0 0 3 ffff88029741ce40 99 0 0 2 -1
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetTcpV6ConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(2))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(40498)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(2389)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(128)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateTimeWait))
+
+			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+
+			Expect(connList.List[1].LocalPort).To(Equal(uint64(2389)))
+			Expect(connList.List[1].RemotePort).To(Equal(uint64(40498)))
+			Expect(connList.List[1].SendQueue).To(Equal(uint64(7890)))
+			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
+			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateTimeWait))
+		})
+
+		It("parses UDP IPv6", func() {
+			connFile := procd + "/net/udp6"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+  62: 00000000000000000000000000000000:006F 00000000000000000000000000000000:0000 07 00000128:00000512 00:00000000 00000000     0        0 11065 2 ffff880297b59c00 0
+  88: 00000000000000000000000001000000:DC89 00000000000000000000000001000000:03E9 01 00007890:00000111 00:00000000 00000000     0        0 203648 2 ffff880296d07400 0
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetUdpV6ConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(2))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(111)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(128)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+
+			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
+			Expect(connList.List[1].LocalPort).To(Equal(uint64(56457)))
+			Expect(connList.List[1].RemotePort).To(Equal(uint64(1001)))
+			Expect(connList.List[1].SendQueue).To(Equal(uint64(7890)))
+			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
+			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
+		})
+
+		It("parses raw IPv6", func() {
+			connFile := procd + "/net/raw6"
+			connFileContents := `
+sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+  58: 00000000000000000000000000000000:003A 00000000000000000000000000000000:0000 07 00000000:00000000 00:00000000 00000000     0        0 201786 2 ffff88029a347000 0
+`
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(connFile, []byte(connFileContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+
+			connList := sigar.NetRawV6ConnList{}
+			err = connList.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(connList.List)).To(Equal(1))
+			Expect(connList.List[0].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+			Expect(connList.List[0].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}))
+			Expect(connList.List[0].LocalPort).To(Equal(uint64(58)))
+			Expect(connList.List[0].RemotePort).To(Equal(uint64(0)))
+			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
+			Expect(connList.List[0].RecvQueue).To(Equal(uint64(0)))
+			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
 		})
 	})
 
