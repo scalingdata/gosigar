@@ -1,6 +1,7 @@
 package sigar
 
 import (
+	"net"
 	"time"
 )
 
@@ -121,6 +122,56 @@ type NetIface struct {
 
 type NetIfaceList struct {
 	List []NetIface
+}
+
+type NetConnState int
+
+const (
+	ConnStateEstablished = NetConnState(iota + 1)
+	ConnStateSynSent
+	ConnStateSynRecv
+	ConnStateFinWait1
+	ConnStateFinWait2
+	ConnStateTimeWait
+	ConnStateClose
+	ConnStateCloseWait
+	ConnStateLastAck
+	ConnStateListen
+	ConnStateClosing
+)
+
+type NetConn struct {
+	LocalAddr  net.IP
+	RemoteAddr net.IP
+	LocalPort  uint64
+	RemotePort uint64
+	SendQueue  uint64
+	RecvQueue  uint64
+	Status     NetConnState
+}
+
+type NetTcpConnList struct {
+	List []NetConn
+}
+
+type NetUdpConnList struct {
+	List []NetConn
+}
+
+type NetRawConnList struct {
+	List []NetConn
+}
+
+type NetTcpV6ConnList struct {
+	List []NetConn
+}
+
+type NetUdpV6ConnList struct {
+	List []NetConn
+}
+
+type NetRawV6ConnList struct {
+	List []NetConn
 }
 
 type ProcList struct {
