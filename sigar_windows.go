@@ -2,14 +2,26 @@
 
 package sigar
 
+// #cgo CFLAGS: -DPSAPI_VERSION=1
+// #cgo LDFLAGS: -lpsapi
 // #include <stdlib.h>
 // #include <windows.h>
+// #include <psapi.h>
 import "C"
 
 import (
 	"fmt"
 	"strconv"
+	"syscall"
 	"unsafe"
+)
+
+
+const (
+	INIT_PID_LIST = 512
+	MAX_PID_LIST = 65536
+
+	INIT_MODULE_NAME_SIZE = 128
 )
 
 func init() {
@@ -183,20 +195,110 @@ func (self *DiskList) Get() error {
 	return nil
 }
 
+func getPidList() ([]C.DWORD, error) {
+	// EnumProcesses doesn't tell you if you've read all the processes,
+	// you need to keep making the array bigger until it isn't full
+	var sizeRead C.DWORD
+	for len := INIT_PID_LIST; len < MAX_PID_LIST; len *= 2 {
+		procList := make([]C.DWORD, len)
+		listSize := C.DWORD(unsafe.Sizeof(procList[0])*uintptr(len))
+		success := C.EnumProcesses(&procList[0], listSize, &sizeRead)
+		if success == C.FALSE {
+			return nil, fmt.Errorf("Failed to enumerate list of processes")
+		}
+		// If we've read less than a full array, slice the list down to just the relevant entries
+		if sizeRead < listSize {
+			return procList[:uintptr(sizeRead)/(unsafe.Sizeof(procList[0]))], nil
+		}
+	}
+	return nil, fmt.Errorf("Expanded process list up to %v, array was full", MAX_PID_LIST)
+}	
+
 func (self *ProcList) Get() error {
-	return notImplemented()
+	procList, err := getPidList()
+	if err != nil {
+		return err
+	}
+	self.List = make([]int, len(procList))
+	for i := range procList {
+		self.List[i] = int(procList[i])
+	}
+	return nil
+}
+
+func openProcess(pid int) C.HANDLE {
+	return C.OpenProcess(C.PROCESS_QUERY_INFORMATION | C.PROCESS_VM_READ, C.FALSE, C.DWORD(pid))
 }
 
 func (self *ProcState) Get(pid int) error {
-	return notImplemented()
+	procH := openProcess(pid)
+	if uintptr(unsafe.Pointer(procH)) == 0 {
+		return fmt.Errorf("Unable to open process %v: error code %v", pid, C.GetLastError())
+	}
+	defer C.CloseHandle(procH)
+
+	// Get the name of only the first module
+	var firstModule C.HMODULE
+	var size C.DWORD
+	if C.EnumProcessModules(procH, &firstModule, C.DWORD(unsafe.Sizeof(firstModule)), &size) != C.TRUE {
+		return fmt.Errorf("Unable to get name of process image for pid %v: error code %v", pid, C.GetLastError())
+	}
+
+	imageName := make([]uint8, INIT_MODULE_NAME_SIZE)
+	imageNameLen := C.GetModuleBaseName(procH, firstModule, (*C.CHAR)(unsafe.Pointer(&imageName[0])), INIT_MODULE_NAME_SIZE)
+	if imageNameLen == 0 {
+		return fmt.Errorf("Unable to get name of first module name for pid %v: error code %v", pid, C.GetLastError())
+	}
+	self.Name = C.GoString((*C.char)(unsafe.Pointer(&imageName[0])))
+
+	// Get process priority
+	self.Priority = int(C.GetPriorityClass(procH))
+	if self.Priority == 0 {
+		return fmt.Errorf("Unable to get process priority for pid %v: error code %v", pid, C.GetLastError())
+	}
+
+	return nil
 }
 
 func (self *ProcMem) Get(pid int) error {
-	return notImplemented()
+	procH := openProcess(pid)
+	if uintptr(unsafe.Pointer(procH)) == 0 {
+		return fmt.Errorf("Unable to open process %v: error code %v", pid, C.GetLastError())
+	}
+	defer C.CloseHandle(procH)
+
+	var counters C.PROCESS_MEMORY_COUNTERS
+	if C.GetProcessMemoryInfo(procH, &counters, C.DWORD(unsafe.Sizeof(counters))) != C.TRUE {
+		return fmt.Errorf("Unable to get memory info for process %v: error code %v", pid, C.GetLastError())
+	}
+	self.Resident = uint64(counters.PagefileUsage)
+	self.PageFaults = uint64(counters.PageFaultCount)
+	self.Size = uint64(counters.WorkingSetSize)
+	return nil
 }
 
 func (self *ProcTime) Get(pid int) error {
-	return notImplemented()
+	procH := openProcess(pid)
+	if uintptr(unsafe.Pointer(procH)) == 0 {
+		return fmt.Errorf("Unable to open process %v: error code %v", pid, C.GetLastError())
+	}
+	defer C.CloseHandle(procH)
+
+	var creationTime syscall.Filetime
+	var exitTime syscall.Filetime
+	var kernelTime syscall.Filetime
+	var userTime syscall.Filetime
+	if C.GetProcessTimes(procH, (*C.FILETIME)(unsafe.Pointer(&creationTime)), (*C.FILETIME)(unsafe.Pointer(&exitTime)), (*C.FILETIME)(unsafe.Pointer(&kernelTime)), (*C.FILETIME)(unsafe.Pointer(&userTime))) != C.TRUE {
+		return fmt.Errorf("Unable to get process time for pid %v: error code %v", pid, C.GetLastError())
+	}
+	// Convert the FILETIME to nanos, then divide to get millis
+	self.StartTime = uint64(creationTime.Nanoseconds()) / 1000000
+
+	// Convert the 100-nanosecond ticks to millis
+	self.User = (uint64(userTime.HighDateTime) << 32 + uint64(userTime.LowDateTime)) / 10000
+	self.Sys = (uint64(kernelTime.HighDateTime) << 32 + uint64(kernelTime.LowDateTime)) / 10000
+	self.Total = self.User + self.Sys
+	return nil
 }
 
 func (self *ProcArgs) Get(pid int) error {
@@ -204,7 +306,38 @@ func (self *ProcArgs) Get(pid int) error {
 }
 
 func (self *ProcExe) Get(pid int) error {
-	return notImplemented()
+	procH := openProcess(pid)
+	if uintptr(unsafe.Pointer(procH)) == 0 {
+		return fmt.Errorf("Unable to open process %v: error code %v", pid, C.GetLastError())
+	}
+	defer C.CloseHandle(procH)
+
+	// Get the exe for the process image
+	imageName := make([]uint8, INIT_MODULE_NAME_SIZE)
+	imageNameLen := C.GetProcessImageFileName(procH, (*C.CHAR)(unsafe.Pointer(&imageName[0])), INIT_MODULE_NAME_SIZE)
+	if imageNameLen == 0 {
+		return fmt.Errorf("Unable to get name of process image for pid %v: error code %v", pid, C.GetLastError())
+	}
+	self.Name = C.GoString((*C.char)(unsafe.Pointer(&imageName[0])))
+	return nil
+}
+
+func (self *ProcIo) Get(pid int) error {
+	procH := openProcess(pid)
+	if uintptr(unsafe.Pointer(procH)) == 0 {
+		return fmt.Errorf("Unable to open process %v: error code %v", pid, C.GetLastError())
+	}
+	defer C.CloseHandle(procH)
+
+	var counters C.IO_COUNTERS
+	if C.GetProcessIoCounters(procH, &counters) != C.TRUE {
+		return fmt.Errorf("Unable to get memory info for process %v: error code %v", pid, C.GetLastError())
+	}
+	self.ReadBytes = uint64(counters.ReadTransferCount)
+	self.ReadOps = uint64(counters.ReadOperationCount)
+	self.WriteBytes = uint64(counters.WriteTransferCount)
+	self.WriteOps = uint64(counters.WriteOperationCount)
+	return nil
 }
 
 func (self *FileSystemUsage) Get(path string) error {

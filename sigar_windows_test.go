@@ -1,6 +1,7 @@
 package sigar_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/scalingdata/ginkgo"
@@ -95,4 +96,78 @@ var _ = Describe("SigarWindows", func() {
 			Ω(sd.Description).Should(Equal("Windows"))
 		})
 	})
+
+	Describe("ProcessList", func() {
+		It("gets the list of processes", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(len(pl.List)).Should(BeNumerically(">", 0))
+		})
+	})
+
+	Describe("ProcessState", func() {
+		It("gets the process detail", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()	
+			Ω(err).ShouldNot(HaveOccurred())
+			for _, pid := range pl.List {
+				details := sigar.ProcState{}
+				err  := details.Get(pid)
+				fmt.Printf("Pid: %v Name: %v Err: %v\n", pid, details.Name, err)
+			}
+		})
+	})
+
+	Describe("ProcessTime", func() {
+		It("gets the process detail", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()	
+			Ω(err).ShouldNot(HaveOccurred())
+			for _, pid := range pl.List {
+				details := sigar.ProcTime{}
+				err  := details.Get(pid)
+				fmt.Printf("Pid: %v Start: %v Process: %v Sys: %v Err: %v\n", pid, details.StartTime, details.User, details.Sys, err)
+			}
+		})
+	})
+
+	Describe("ProcessMem", func() {
+		It("gets the process detail", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()	
+			Ω(err).ShouldNot(HaveOccurred())
+			for _, pid := range pl.List {
+				details := sigar.ProcMem{}
+				err  := details.Get(pid)
+				fmt.Printf("Pid: %v Resident: %v Size: %v Faults: %v Err: %v\n", pid, details.Resident, details.Size, details.PageFaults, err)
+			}
+		})
+	})
+
+	Describe("ProcessIO", func() {
+		It("gets the process detail", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()	
+			Ω(err).ShouldNot(HaveOccurred())
+			for _, pid := range pl.List {
+				details := sigar.ProcIo{}
+				err  := details.Get(pid)
+				fmt.Printf("Pid: %v Read Ops: %v Read Size: %v Write Ops: %v Write Size: %v Err: %v\n", pid, details.ReadOps, details.ReadBytes, details.WriteOps, details.WriteBytes, err)
+			}
+		})
+	})
+
+	Describe("ProcessExe", func() {
+		It("gets the process detail", func() {
+			pl := sigar.ProcList{}
+			err := pl.Get()	
+			Ω(err).ShouldNot(HaveOccurred())
+			for _, pid := range pl.List {
+				details := sigar.ProcExe{}
+				err  := details.Get(pid)
+				fmt.Printf("Pid: %v Exe:%v Err: %v\n", pid, details.Name, err)
+			}
+		})
+	})		
 })
