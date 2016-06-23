@@ -227,6 +227,41 @@ func (self *FileSystemUsage) Get(path string) error {
 	return nil
 }
 
+func (self *NetIfaceList) Get() error {
+	netQueries := []string{
+		`\Network Interface(*)\Bytes Sent/sec`,
+		`\Network Interface(*)\Bytes Received/sec`,
+		`\Network Interface(*)\Packets Sent/sec`,
+		`\Network Interface(*)\Packets Received/sec`,
+		`\Network Interface(*)\Packets outbound errors`,
+		`\Network Interface(*)\Packets received errors`,
+		`\Network Interface(*)\Packets outbound discarded`,
+		`\Network Interface(*)\Packets received discarded`,
+		`\Network Interface(*)\Packets received non-unicast/sec`,
+	}
+	queryResults, err := runRawPdhArrayQueries(netQueries)
+	if err != nil {
+		return err
+	}
+	self.List = make([]NetIface, 0)
+	for iface, res := range queryResults {
+		ifaceStruct := NetIface {
+			Name: iface,
+			SendBytes: res[0],
+			RecvBytes: res[1],
+			SendPackets: res[2],
+			RecvPackets: res[3],
+			SendErrors: res[4],
+			RecvErrors: res[5],
+			SendDropped: res[6],
+			RecvDropped: res[7],
+			RecvMulticast: res[8],
+		}
+		self.List = append(self.List, ifaceStruct)
+	}
+	return nil
+}
+
 func (self *SystemInfo) Get() error {
 	self.Sysname = "Windows"
 	return nil
