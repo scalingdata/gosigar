@@ -2,8 +2,119 @@
 
 package sigar
 
-// #include <stdlib.h>
-// #include <windows.h>
+/*
+// We need both of these libraries to list network connections
+#cgo LDFLAGS: -liphlpapi -lws2_32
+
+// IPv6 connection lists are only supported on Vista and above
+#define _WIN32_WINNT 0x600
+
+#include <stdlib.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <iphlpapi.h>
+
+// Helper methods to create appropriately-sized MIB tables - it's easier to
+// malloc them and cast them to the right type than to do the unsafe.Pointer
+// casting in Go. Returns NULL if there's an error, otherwise the pointer
+// returned needs to be free'd by the caller.
+PMIB_TCPTABLE getTcpTable(PDWORD err) {
+	PMIB_TCPTABLE pTable = (MIB_TCPTABLE *) malloc(sizeof(MIB_TCPTABLE));
+	if (pTable == NULL) {
+		*err = 1;
+		return NULL;
+	}
+	DWORD size = sizeof(MIB_TCPTABLE);
+	if ((*err = GetTcpTable(pTable, &size, FALSE)) != ERROR_INSUFFICIENT_BUFFER) {
+		if (*err == NO_ERROR) {
+			return pTable;
+		}
+		free(pTable);
+		return NULL;
+	}
+	free(pTable);
+	pTable = (MIB_TCPTABLE *) malloc(size);
+	if ((*err = GetTcpTable(pTable, &size, FALSE)) != NO_ERROR) {
+		free(pTable);
+		return NULL;
+	}
+	*err = 0;
+	return pTable;
+}
+
+PMIB_UDPTABLE getUdpTable(PDWORD err) {
+	PMIB_UDPTABLE pTable = (MIB_UDPTABLE *) malloc(sizeof(MIB_UDPTABLE));
+	if (pTable == NULL) {
+		*err = 1;
+		return NULL;
+	}
+	DWORD size = sizeof(MIB_UDPTABLE);
+	if ((*err = GetUdpTable(pTable, &size, FALSE)) != ERROR_INSUFFICIENT_BUFFER) {
+		if (*err == NO_ERROR) {
+			return pTable;
+		}
+		free(pTable);
+		return NULL;
+	}
+	free(pTable);
+	pTable = (MIB_UDPTABLE *) malloc(size);
+	if ((*err = GetUdpTable(pTable, &size, FALSE)) != NO_ERROR) {
+		free(pTable);
+		return NULL;
+	}
+	*err = 0;
+	return pTable;
+}
+
+PMIB_TCP6TABLE getTcp6Table(PDWORD err) {
+	PMIB_TCP6TABLE pTable = (MIB_TCP6TABLE *) malloc(sizeof(MIB_TCP6TABLE));
+	if (pTable == NULL) {
+		*err = 1;
+		return NULL;
+	}
+	DWORD size = sizeof(MIB_TCP6TABLE);
+	if ((*err = GetTcp6Table(pTable, &size, FALSE)) != ERROR_INSUFFICIENT_BUFFER) {
+		if (*err == NO_ERROR) {
+			return pTable;
+		}
+		free(pTable);
+		return NULL;
+	}
+	free(pTable);
+	pTable = (MIB_TCP6TABLE *) malloc(size);
+	if ((*err = GetTcp6Table(pTable, &size, FALSE)) != NO_ERROR) {
+		free(pTable);
+		return NULL;
+	}
+	*err = 0;
+	return pTable;
+}
+
+PMIB_UDP6TABLE getUdp6Table(PDWORD err) {
+	PMIB_UDP6TABLE pTable = (MIB_UDP6TABLE *) malloc(sizeof(MIB_UDP6TABLE));
+	if (pTable == NULL) {
+		*err = 1;
+		return NULL;
+	}
+	DWORD size = sizeof(MIB_UDP6TABLE);
+	if ((*err = GetUdp6Table(pTable, &size, FALSE)) != ERROR_INSUFFICIENT_BUFFER) {
+		if (*err == NO_ERROR) {
+			return pTable;
+		}
+		free(pTable);
+		return NULL;
+	}
+	free(pTable);
+	pTable = (MIB_UDP6TABLE *) malloc(size);
+	if ((*err = GetUdp6Table(pTable, &size, FALSE)) != NO_ERROR) {
+		free(pTable);
+		return NULL;
+	}
+	*err = 0;
+	return pTable;
+}
+*/
 import "C"
 
 import (
@@ -258,6 +369,174 @@ func (self *NetIfaceList) Get() error {
 			RecvMulticast: res[8],
 		}
 		self.List = append(self.List, ifaceStruct)
+	}
+	return nil
+}
+
+func convertTcpState(state C.DWORD) NetConnState {
+	switch state {
+		case C.MIB_TCP_STATE_CLOSED:
+			return ConnStateClose
+		case C.MIB_TCP_STATE_LISTEN:
+			return ConnStateListen
+		case C.MIB_TCP_STATE_SYN_SENT:
+			return ConnStateSynSent
+		case C.MIB_TCP_STATE_SYN_RCVD:
+			return ConnStateSynRecv
+		case C.MIB_TCP_STATE_ESTAB:
+			return ConnStateEstablished
+		case C.MIB_TCP_STATE_FIN_WAIT1:
+			return ConnStateFinWait1
+		case C.MIB_TCP_STATE_FIN_WAIT2:
+			return ConnStateFinWait2
+		case C.MIB_TCP_STATE_CLOSE_WAIT:
+			return ConnStateCloseWait
+		case C.MIB_TCP_STATE_CLOSING:
+			return ConnStateClosing
+		case C.MIB_TCP_STATE_LAST_ACK:
+			return ConnStateLastAck
+		case C.MIB_TCP_STATE_TIME_WAIT:
+			return ConnStateTimeWait
+		default:
+			return 0
+	}
+} 
+
+/* Helper methods to convert IPv4 and IPv6 representations to Go byte arrays */
+func UlongToBytes(addr C.u_long) []byte {
+	return []byte{byte((addr & 0xFF000000)>>24), byte((addr & 0x00FF0000) >> 16), byte((addr & 0x0000FF00) >> 8), byte(addr & 0x000000FF)}
+}
+
+func In6AddrToBytes(addr C.IN6_ADDR) []byte {
+	outputAddr := make([]byte, 16)
+	for i :=0; i < 16; i++ {
+		outputAddr[i] = byte(addr.u[i])
+	}
+	return outputAddr
+}
+
+/* Helper methods to access rows of the MIB tables - Go doesn't know the size of the row arrays, we have to compute the offsets ourselves */
+func tcpTableElement(table C.PMIB_TCPTABLE, index C.DWORD) C.PMIB_TCPROW {
+	if index >= table.dwNumEntries {
+		return nil
+	}
+	return C.PMIB_TCPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+}
+
+func udpTableElement(table C.PMIB_UDPTABLE, index C.DWORD) C.PMIB_UDPROW {
+	if index >= table.dwNumEntries {
+		return nil
+	}
+	return C.PMIB_UDPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+}
+
+func tcp6TableElement(table C.PMIB_TCP6TABLE, index C.DWORD) C.PMIB_TCP6ROW {
+	if index >= table.dwNumEntries {
+		return nil
+	}
+	return C.PMIB_TCP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+}
+
+func udp6TableElement(table C.PMIB_UDP6TABLE, index C.DWORD) C.PMIB_UDP6ROW {
+	if index >= table.dwNumEntries {
+		return nil
+	}
+	return C.PMIB_UDP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+}
+
+func (self *NetTcpConnList) Get() error {
+	var err C.DWORD
+	table := C.getTcpTable(&err)
+	if err != 0 {
+		return fmt.Errorf("Error getting list of TCP connections: %v", err)
+	}
+	defer C.free(unsafe.Pointer(table))
+	self.List = make([]NetConn, 0)
+	for i := C.DWORD(0); i < table.dwNumEntries; i++ {
+		elem := tcpTableElement(table, i)
+		if elem == nil {
+			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
+		}
+		localAddr := C.htonl(C.u_long(elem.dwLocalAddr))
+		remoteAddr := C.htonl(C.u_long(elem.dwRemoteAddr))
+		conn := NetConn{
+			Status: convertTcpState(elem.dwState),
+			LocalAddr: UlongToBytes(localAddr),
+			RemoteAddr: UlongToBytes(remoteAddr),
+			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			RemotePort: uint64(C.ntohs(C.u_short(elem.dwRemotePort))),
+		}
+		self.List = append(self.List, conn)	
+	}
+	return nil
+}
+
+func (self *NetUdpConnList) Get() error {
+	var err C.DWORD
+	table := C.getUdpTable(&err)
+	if err != 0 {
+		return fmt.Errorf("Error getting list of UDP connections: %v", err)
+	}
+	defer C.free(unsafe.Pointer(table))
+	self.List = make([]NetConn, 0)
+	for i := C.DWORD(0); i < table.dwNumEntries; i++ {
+		elem := udpTableElement(table, i)
+		if elem == nil {
+			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
+		}
+		localAddr := C.htonl(C.u_long(elem.dwLocalAddr))
+		conn := NetConn{
+			LocalAddr: UlongToBytes(localAddr),
+			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+		}
+		self.List = append(self.List, conn)	
+	}
+	return nil
+}
+
+func (self *NetTcpV6ConnList) Get() error {
+	var err C.DWORD
+	table := C.getTcp6Table(&err)
+	if err != 0 {
+		return fmt.Errorf("Error getting list of TCP connections: %v", err)
+	}
+	defer C.free(unsafe.Pointer(table))
+	self.List = make([]NetConn, 0)
+	for i := C.DWORD(0); i < table.dwNumEntries; i++ {
+		elem := tcp6TableElement(table, i)
+		if elem == nil {
+			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
+		}
+		conn := NetConn{
+			Status: convertTcpState(C.DWORD(elem.State)),
+			LocalAddr: In6AddrToBytes(elem.LocalAddr),
+			RemoteAddr: In6AddrToBytes(elem.RemoteAddr),
+			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			RemotePort: uint64(C.ntohs(C.u_short(elem.dwRemotePort))),
+		}
+		self.List = append(self.List, conn)	
+	}
+	return nil	
+}
+
+func (self *NetUdpV6ConnList) Get() error {
+	var err C.DWORD
+	table := C.getUdp6Table(&err)
+	if err != 0 {
+		return fmt.Errorf("Error getting list of UDP connections: %v", err)
+	}
+	defer C.free(unsafe.Pointer(table))
+	self.List = make([]NetConn, 0)
+	for i := C.DWORD(0); i < table.dwNumEntries; i++ {
+		elem := udp6TableElement(table, i)
+		if elem == nil {
+			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
+		}
+		conn := NetConn{
+			LocalAddr:  In6AddrToBytes(elem.dwLocalAddr),
+			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+		}
+		self.List = append(self.List, conn)	
 	}
 	return nil
 }
