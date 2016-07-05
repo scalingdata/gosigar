@@ -204,7 +204,7 @@ func getPidList() ([]C.DWORD, error) {
 		listSize := C.DWORD(unsafe.Sizeof(procList[0])*uintptr(len))
 		success := C.EnumProcesses(&procList[0], listSize, &sizeRead)
 		if success == C.FALSE {
-			return nil, fmt.Errorf("Failed to enumerate list of processes")
+			return nil, fmt.Errorf("Failed to enumerate list of processes - %v ", C.GetLastError())
 		}
 		// If we've read less than a full array, slice the list down to just the relevant entries
 		if sizeRead < listSize {
