@@ -2,7 +2,7 @@ package sigar_test
 
 import (
 	"os"
-
+	"fmt"
 	. "github.com/scalingdata/ginkgo"
 	. "github.com/scalingdata/gomega"
 
@@ -75,6 +75,15 @@ var _ = Describe("SigarWindows", func() {
 			err := cpuList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(cpuList.List[0].Total()).Should(BeNumerically(">", 0))
+		})
+	})
+
+	Describe("NetIface", func() {
+		It("gets interface stats", func() {
+			netList := sigar.NetIfaceList{}
+			err := netList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			fmt.Printf("IfaceList: %v\n", netList)
 		})
 	})
 
