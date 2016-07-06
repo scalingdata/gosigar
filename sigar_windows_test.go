@@ -87,6 +87,33 @@ var _ = Describe("SigarWindows", func() {
 		})
 	})
 
+	Describe("NetConnList", func() {
+		It("gets TCP IPv4 conns", func() {
+			connList := sigar.NetTcpConnList{}
+			err := connList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			fmt.Printf("Connections: %v\n", connList)
+		})
+		It("gets UDP IPv4 conns", func() {
+			connList := sigar.NetUdpConnList{}
+			err := connList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			fmt.Printf("Connections: %v\n", connList)
+		})
+		It("gets TCP IPv6 conns", func() {
+			connList := sigar.NetTcpV6ConnList{}
+			err := connList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			fmt.Printf("Connections: %v\n", connList)
+		})
+		It("gets UDP IPv6 conns", func() {
+			connList := sigar.NetUdpV6ConnList{}
+			err := connList.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+			fmt.Printf("Connections: %v\n", connList)
+		})
+	})
+
 	Describe("SystemInfo", func() {
 		It("gets system info", func() {
 			si := sigar.SystemInfo{}
