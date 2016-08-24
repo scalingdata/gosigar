@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/scalingdata/ginkgo"
@@ -15,6 +16,7 @@ import (
 var _ = Describe("sigarLinux", func() {
 	var procd string
 	var sysd string
+	var etcd string
 
 	BeforeEach(func() {
 		var err error
@@ -22,14 +24,18 @@ var _ = Describe("sigarLinux", func() {
 		Expect(err).ToNot(HaveOccurred())
 		sysd, err = ioutil.TempDir("", "sigarTests")
 		Expect(err).ToNot(HaveOccurred())
+		etcd, err = ioutil.TempDir("", "sigarTests")
+		Expect(err).ToNot(HaveOccurred())
 
 		sigar.Procd = procd
 		sigar.Sysd = sysd
+		sigar.Etcd = etcd
 	})
 
 	AfterEach(func() {
 		sigar.Procd = "/proc"
 		sigar.Sysd = "/sys"
+		sigar.Etcd = "/etc"
 	})
 
 	Describe("CPU", func() {
@@ -659,18 +665,69 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 
 	Describe("SystemDistribution", func() {
 		var (
-			sd sigar.SystemDistribution
+			sd                    sigar.SystemDistribution
+			redhatReleaseFile     string
+			redhatReleaseContents string
+			lsbReleaseFile        string
+			lsbReleaseContents    string
 		)
 
 		BeforeEach(func() {
 			sd = sigar.SystemDistribution{}
+			redhatReleaseFile = etcd + "/redhat-release"
+			redhatReleaseContents = "CentOS release 6.8 (Final)\n"
+
+			lsbReleaseFile = etcd + "/lsb-release"
+			lsbReleaseContents = `DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=12.04
+DISTRIB_CODENAME=precise
+DISTRIB_DESCRIPTION="Ubuntu 12.04.5 LTS"
+`
+
+			// Always write lsb-release. The redhat-release file is only written by tests that use it
+			err := ioutil.WriteFile(lsbReleaseFile, []byte(lsbReleaseContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			os.Remove(lsbReleaseFile)
+			os.Remove(redhatReleaseFile)
 		})
 
 		Describe("Get", func() {
-			It("gets System Distribution", func() {
+			It("gets System Distribution from redhat-release, if present", func() {
+				err := ioutil.WriteFile(redhatReleaseFile, []byte(redhatReleaseContents), 0444)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = sd.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(sd.Description).To(Equal(strings.TrimSpace(redhatReleaseContents)))
+			})
+
+			It("gets System Distribution from lsb-release", func() {
 				err := sd.Get()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(sd.Description).ToNot(Equal(""))
+				Expect(sd.Description).To(Equal("Ubuntu 12.04.5 LTS"))
+			})
+
+			It("gets System Distribution from lsb-release with blank distribution description", func() {
+				err := os.Remove(lsbReleaseFile)
+				Expect(err).ToNot(HaveOccurred())
+				err = ioutil.WriteFile(lsbReleaseFile, []byte("DISTRIB_DESCRIPTION="), 0444)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = sd.Get()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(sd.Description).To(Equal(""))
+			})
+
+			It("errors when lsb-release is not present", func() {
+				err := os.Remove(lsbReleaseFile)
+				Expect(err).ToNot(HaveOccurred())
+
+				err = sd.Get()
+				Expect(err).To(HaveOccurred())
+				Expect(sd.Description).To(Equal(""))
 			})
 		})
 	})

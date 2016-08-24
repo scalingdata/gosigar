@@ -22,12 +22,14 @@ var system struct {
 
 var Procd string
 var Sysd string
+var Etcd string
 
 func init() {
 	system.ticks = 100 // C.sysconf(C._SC_CLK_TCK)
 
 	Procd = "/proc"
 	Sysd = "/sys"
+	Etcd = "/etc"
 	LoadStartTime()
 }
 
@@ -724,12 +726,24 @@ func (self *SystemInfo) Get() error {
 	return nil
 }
 
+var distributionDesc string = "DISTRIB_DESCRIPTION="
+
 func (self *SystemDistribution) Get() error {
-	b, err := ioutil.ReadFile("/etc/redhat-release")
-	if err != nil {
-		return err
+	// Special case for redhat/centos, ignoring any error
+	_ = readFile(Etcd+"/redhat-release", func(line string) bool {
+		self.Description = line
+		return false
+	})
+	if self.Description != "" {
+		return nil
 	}
 
-	self.Description = string(b)
-	return nil
+	// Read /etc/lsb-release
+	return readFile(Etcd+"/lsb-release", func(line string) bool {
+		if strings.HasPrefix(line, distributionDesc) {
+			self.Description = strings.Trim(line[len(distributionDesc):], `"`)
+			return false
+		}
+		return true
+	})
 }
