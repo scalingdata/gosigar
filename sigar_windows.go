@@ -235,7 +235,7 @@ func (self *FileSystemList) Get() error {
 	if capacity == 0 {
 		capacity = 4
 	}
-	self.List = make([]FileSystem, capacity)
+	self.List = make([]FileSystem, 0, capacity)
 
 	iter, err := NewWindowsVolumeIterator()
 	if err != nil {

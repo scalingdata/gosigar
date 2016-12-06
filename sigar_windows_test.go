@@ -37,6 +37,15 @@ var _ = Describe("SigarWindows", func() {
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(len(fsList.List)).Should(BeNumerically(">", 0))
 		})
+
+		It("doesn't expand needlessly", func() {
+			fsList := sigar.FileSystemList{}
+			for i :=0; i<100; i++ {
+				err := fsList.Get()
+				Ω(err).ShouldNot(HaveOccurred())
+			}
+			Ω(len(fsList.List)).Should(BeNumerically("<", 100))
+		})
 	})
 
 	Describe("Disk", func() {
