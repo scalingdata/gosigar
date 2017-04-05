@@ -94,6 +94,58 @@ type FileSystemUsage struct {
 	FreeFiles uint64
 }
 
+type NetProtoV4Stats struct {
+	IP   IPStats
+	ICMP ICMPStats
+	TCP  TCPStats
+	UDP  UDPStats
+}
+
+type NetProtoV6Stats struct {
+	IP   IPStats
+	ICMP ICMPStats
+	UDP  UDPStats
+}
+
+type IPStats struct {
+	InReceives    uint64
+	InAddrErrors  uint64
+	ForwDatagrams uint64
+	InDelivers    uint64
+	InDiscards    uint64
+	OutRequests   uint64
+}
+
+type ICMPStats struct {
+	InMsgs          uint64
+	InErrors        uint64
+	InDestUnreachs  uint64
+	OutMsgs         uint64
+	OutErrors       uint64 // Not reported by snmp6
+	OutDestUnreachs uint64
+}
+
+type TCPStats struct {
+	ActiveOpens  uint64
+	PassiveOpens uint64
+	AttemptFails uint64
+	EstabResets  uint64
+	InSegs       uint64
+	OutSegs      uint64
+	RetransSegs  uint64
+	InErrs       uint64
+	OutRsts      uint64
+}
+
+type UDPStats struct {
+	InDatagrams  uint64
+	OutDatagrams uint64
+	InErrors     uint64
+	NoPorts      uint64
+	RcvbufErrors uint64 // Not reported by snmp6
+	SndbufErrors uint64 // Not reported by snmp6
+}
+
 type NetIface struct {
 	Name       string
 	MTU        uint64

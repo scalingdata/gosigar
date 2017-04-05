@@ -374,6 +374,178 @@ major minor  #blocks  name
 		})
 	})
 
+	Describe("NetProtoV4", func() {
+		BeforeEach(func() {
+			netSnmpContents := ` 
+Ip: Forwarding DefaultTTL InReceives InHdrErrors InAddrErrors ForwDatagrams InUnknownProtos InDiscards InDelivers OutRequests OutDiscards OutNoRoutes ReasmTimeout ReasmReqds ReasmOKs ReasmFails FragOKs FragFails FragCreates
+Ip: 2 64 1055501 0 56 1 0 2 1055445 503315 0 3 0 0 0 0 0 0 0
+Icmp: InMsgs InErrors InDestUnreachs InTimeExcds InParmProbs InSrcQuenchs InRedirects InEchos InEchoReps InTimestamps InTimestampReps InAddrMasks InAddrMaskReps OutMsgs OutErrors OutDestUnreachs OutTimeExcds OutParmProbs OutSrcQuenchs OutRedirects OutEchos OutEchoReps OutTimestamps OutTimestampReps OutAddrMasks OutAddrMaskReps
+Icmp: 83 1 12 0 0 0 0 30 41 0 0 0 0 71 2 33 0 0 0 0 41 30 0 0 0 0
+IcmpMsg: InType0 InType3 InType8 OutType0 OutType8
+IcmpMsg: 41 12 30 30 41
+Tcp: RtoAlgorithm RtoMin RtoMax MaxConn ActiveOpens PassiveOpens AttemptFails EstabResets CurrEstab InSegs OutSegs RetransSegs InErrs OutRsts
+Tcp: 1 200 120000 -1 1189 386 385 66 2 1053372 501082 24 99 526
+Udp: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
+Udp: 1997 77 1 2145 99 88
+UdpLite: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
+UdpLite: 0 0 0 0 0 0`
+			netSnmpFile := procd + "/net/snmp"
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(netSnmpFile, []byte(netSnmpContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("parses network protocol stats", func() {
+			netStat := sigar.NetProtoV4Stats{}
+			err := netStat.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(netStat.IP.InReceives).To(Equal(uint64(1055501)))
+			Expect(netStat.IP.InAddrErrors).To(Equal(uint64(56)))
+			Expect(netStat.IP.ForwDatagrams).To(Equal(uint64(1)))
+			Expect(netStat.IP.InDelivers).To(Equal(uint64(1055445)))
+			Expect(netStat.IP.InDiscards).To(Equal(uint64(2)))
+			Expect(netStat.IP.OutRequests).To(Equal(uint64(503315)))
+
+			Expect(netStat.ICMP.InMsgs).To(Equal(uint64(83)))
+			Expect(netStat.ICMP.InErrors).To(Equal(uint64(1)))
+			Expect(netStat.ICMP.InDestUnreachs).To(Equal(uint64(12)))
+			Expect(netStat.ICMP.OutMsgs).To(Equal(uint64(71)))
+			Expect(netStat.ICMP.OutErrors).To(Equal(uint64(2)))
+			Expect(netStat.ICMP.OutDestUnreachs).To(Equal(uint64(33)))
+
+			Expect(netStat.TCP.ActiveOpens).To(Equal(uint64(1189)))
+			Expect(netStat.TCP.PassiveOpens).To(Equal(uint64(386)))
+			Expect(netStat.TCP.AttemptFails).To(Equal(uint64(385)))
+			Expect(netStat.TCP.EstabResets).To(Equal(uint64(66)))
+			Expect(netStat.TCP.InSegs).To(Equal(uint64(1053372)))
+			Expect(netStat.TCP.OutSegs).To(Equal(uint64(501082)))
+			Expect(netStat.TCP.RetransSegs).To(Equal(uint64(24)))
+			Expect(netStat.TCP.InErrs).To(Equal(uint64(99)))
+			Expect(netStat.TCP.OutRsts).To(Equal(uint64(526)))
+
+			Expect(netStat.UDP.InDatagrams).To(Equal(uint64(1997)))
+			Expect(netStat.UDP.OutDatagrams).To(Equal(uint64(2145)))
+			Expect(netStat.UDP.InErrors).To(Equal(uint64(1)))
+			Expect(netStat.UDP.NoPorts).To(Equal(uint64(77)))
+			Expect(netStat.UDP.RcvbufErrors).To(Equal(uint64(99)))
+			Expect(netStat.UDP.SndbufErrors).To(Equal(uint64(88)))
+		})
+	})
+
+	Describe("NetProtoV6", func() {
+		BeforeEach(func() {
+			netSnmpContents := `
+Ip6InReceives                   	1147
+Ip6InHdrErrors                  	0
+Ip6InTooBigErrors               	0
+Ip6InNoRoutes                   	0
+Ip6InAddrErrors                 	10
+Ip6InUnknownProtos              	0
+Ip6InTruncatedPkts              	0
+Ip6InDiscards                   	13
+Ip6InDelivers                   	1146
+Ip6OutForwDatagrams             	11
+Ip6OutRequests                  	1224
+Ip6OutDiscards                  	0
+Ip6OutNoRoutes                  	21
+Ip6ReasmTimeout                 	0
+Ip6ReasmReqds                   	0
+Ip6ReasmOKs                     	0
+Ip6ReasmFails                   	0
+Ip6FragOKs                      	0
+Ip6FragFails                    	0
+Ip6FragCreates                  	0
+Ip6InMcastPkts                  	0
+Ip6OutMcastPkts                 	106
+Ip6InOctets                     	119080
+Ip6OutOctets                    	124428
+Ip6InMcastOctets                	0
+Ip6OutMcastOctets               	7912
+Ip6InBcastOctets                	0
+Ip6OutBcastOctets               	0
+Icmp6InMsgs                     	1140
+Icmp6InErrors                   	50
+Icmp6OutMsgs                    	1217
+Icmp6InDestUnreachs             	51
+Icmp6InPktTooBigs               	0
+Icmp6InTimeExcds                	0
+Icmp6InParmProblems             	0
+Icmp6InEchos                    	570
+Icmp6InEchoReplies              	570
+Icmp6InGroupMembQueries         	0
+Icmp6InGroupMembResponses       	0
+Icmp6InGroupMembReductions      	0
+Icmp6InRouterSolicits           	0
+Icmp6InRouterAdvertisements     	0
+Icmp6InNeighborSolicits         	0
+Icmp6InNeighborAdvertisements   	0
+Icmp6InRedirects                	0
+Icmp6InMLDv2Reports             	0
+Icmp6OutDestUnreachs            	52
+Icmp6OutPktTooBigs              	0
+Icmp6OutTimeExcds               	0
+Icmp6OutParmProblems            	0
+Icmp6OutEchos                   	570
+Icmp6OutEchoReplies             	570
+Icmp6OutGroupMembQueries        	0
+Icmp6OutGroupMembResponses      	0
+Icmp6OutGroupMembReductions     	0
+Icmp6OutRouterSolicits          	36
+Icmp6OutRouterAdvertisements    	0
+Icmp6OutNeighborSolicits        	12
+Icmp6OutNeighborAdvertisements  	0
+Icmp6OutRedirects               	0
+Icmp6OutMLDv2Reports            	29
+Icmp6InType128                  	570
+Icmp6InType129                  	570
+Icmp6OutType128                 	570
+Icmp6OutType129                 	570
+Icmp6OutType133                 	36
+Icmp6OutType135                 	12
+Icmp6OutType143                 	29
+Udp6InDatagrams                 	700
+Udp6NoPorts                     	750
+Udp6InErrors                    	751
+Udp6OutDatagrams                	752
+UdpLite6InDatagrams             	0
+UdpLite6NoPorts                 	0
+UdpLite6InErrors                	0
+UdpLite6OutDatagrams            	0
+`
+			netSnmpFile := procd + "/net/snmp6"
+			err := os.MkdirAll(procd+"/net", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(netSnmpFile, []byte(netSnmpContents), 0444)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("parses network protocol stats", func() {
+			netStat := sigar.NetProtoV6Stats{}
+			err := netStat.Get()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(netStat.IP.InReceives).To(Equal(uint64(1147)))
+			Expect(netStat.IP.InAddrErrors).To(Equal(uint64(10)))
+			Expect(netStat.IP.ForwDatagrams).To(Equal(uint64(11)))
+			Expect(netStat.IP.InDelivers).To(Equal(uint64(1146)))
+			Expect(netStat.IP.InDiscards).To(Equal(uint64(13)))
+			Expect(netStat.IP.OutRequests).To(Equal(uint64(1224)))
+
+			Expect(netStat.ICMP.InMsgs).To(Equal(uint64(1140)))
+			Expect(netStat.ICMP.InErrors).To(Equal(uint64(50)))
+			Expect(netStat.ICMP.InDestUnreachs).To(Equal(uint64(51)))
+			Expect(netStat.ICMP.OutMsgs).To(Equal(uint64(1217)))
+			Expect(netStat.ICMP.OutErrors).To(Equal(uint64(0))) // Not reported by snmp6
+			Expect(netStat.ICMP.OutDestUnreachs).To(Equal(uint64(52)))
+
+			Expect(netStat.UDP.InDatagrams).To(Equal(uint64(700)))
+			Expect(netStat.UDP.OutDatagrams).To(Equal(uint64(752)))
+			Expect(netStat.UDP.InErrors).To(Equal(uint64(751)))
+			Expect(netStat.UDP.NoPorts).To(Equal(uint64(750)))
+			Expect(netStat.UDP.RcvbufErrors).To(Equal(uint64(0))) // Not reported by snmp6
+			Expect(netStat.UDP.SndbufErrors).To(Equal(uint64(0))) // Not reported by snmp6
+		})
+	})
 	Describe("NetIface", func() {
 		var netDevFile string
 		BeforeEach(func() {

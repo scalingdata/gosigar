@@ -137,6 +137,129 @@ func (self *CpuList) Get() error {
 
 	return err
 }
+func (self *NetProtoV6Stats) Get() error {
+	return readFile(Procd+"/net/snmp6", func(line string) bool {
+		fields := strings.Fields(line)
+
+		// Lines should be key/value pairs separated by whitespace, ignore other lines
+		if len(fields) != 2 {
+			return true
+		}
+
+		switch fields[0] {
+		case "Ip6InReceives":
+			self.IP.InReceives, _ = strtoull(fields[1])
+		case "Ip6InAddrErrors":
+			self.IP.InAddrErrors, _ = strtoull(fields[1])
+		case "Ip6OutForwDatagrams":
+			self.IP.ForwDatagrams, _ = strtoull(fields[1])
+		case "Ip6InDelivers":
+			self.IP.InDelivers, _ = strtoull(fields[1])
+		case "Ip6InDiscards":
+			self.IP.InDiscards, _ = strtoull(fields[1])
+		case "Ip6OutRequests":
+			self.IP.OutRequests, _ = strtoull(fields[1])
+		case "Icmp6InMsgs":
+			self.ICMP.InMsgs, _ = strtoull(fields[1])
+		case "Icmp6InErrors":
+			self.ICMP.InErrors, _ = strtoull(fields[1])
+		case "Icmp6InDestUnreachs":
+			self.ICMP.InDestUnreachs, _ = strtoull(fields[1])
+		case "Icmp6OutMsgs":
+			self.ICMP.OutMsgs, _ = strtoull(fields[1])
+		case "Icmp6OutDestUnreachs":
+			self.ICMP.OutDestUnreachs, _ = strtoull(fields[1])
+		case "Udp6InDatagrams":
+			self.UDP.InDatagrams, _ = strtoull(fields[1])
+		case "Udp6OutDatagrams":
+			self.UDP.OutDatagrams, _ = strtoull(fields[1])
+		case "Udp6InErrors":
+			self.UDP.InErrors, _ = strtoull(fields[1])
+		case "Udp6NoPorts":
+			self.UDP.NoPorts, _ = strtoull(fields[1])
+		}
+		return true
+	})
+}
+
+func readField(positions map[string]int, fields []string, field string) uint64 {
+	if positions[field] != 0 {
+		value, _ := strtoull(fields[positions[field]])
+		return value
+	}
+	return 0
+}
+
+func (self *NetProtoV4Stats) Get() error {
+	// Each line starts with a header that describes the values, e.g.:
+	// Udp: InDatagrams NoPorts InErrors OutDatagrams RcvbufErrors SndbufErrors
+	// This map keeps track of the names of each position for each protocol. Reload
+	// it each time we parse.
+	protocols := make(map[string]map[string]int)
+
+	return readFile(Procd+"/net/snmp", func(line string) bool {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return true
+		}
+
+		// The first field is the protocol name
+		protocol := fields[0]
+
+		// The first line with this protocol name defines the column names
+		positions := protocols[protocol]
+
+		// Parse column headers if needed
+		if positions == nil {
+			positions = make(map[string]int)
+			for i := 1; i < len(fields); i++ {
+				positions[fields[i]] = i
+			}
+
+			protocols[protocol] = positions
+			return true
+		}
+
+		// Use the previously populated positions map to parse the line
+		switch protocol {
+		case "Ip:":
+			self.IP.InReceives = readField(positions, fields, "InReceives")
+			self.IP.InAddrErrors = readField(positions, fields, "InAddrErrors")
+			self.IP.ForwDatagrams = readField(positions, fields, "ForwDatagrams")
+			self.IP.InDelivers = readField(positions, fields, "InDelivers")
+			self.IP.InDiscards = readField(positions, fields, "InDiscards")
+			self.IP.OutRequests = readField(positions, fields, "OutRequests")
+
+		case "Icmp:":
+			self.ICMP.InMsgs = readField(positions, fields, "InMsgs")
+			self.ICMP.InErrors = readField(positions, fields, "InErrors")
+			self.ICMP.InDestUnreachs = readField(positions, fields, "InDestUnreachs")
+			self.ICMP.OutMsgs = readField(positions, fields, "OutMsgs")
+			self.ICMP.OutErrors = readField(positions, fields, "OutErrors")
+			self.ICMP.OutDestUnreachs = readField(positions, fields, "OutDestUnreachs")
+
+		case "Tcp:":
+			self.TCP.ActiveOpens = readField(positions, fields, "ActiveOpens")
+			self.TCP.PassiveOpens = readField(positions, fields, "PassiveOpens")
+			self.TCP.AttemptFails = readField(positions, fields, "AttemptFails")
+			self.TCP.EstabResets = readField(positions, fields, "EstabResets")
+			self.TCP.InSegs = readField(positions, fields, "InSegs")
+			self.TCP.OutSegs = readField(positions, fields, "OutSegs")
+			self.TCP.RetransSegs = readField(positions, fields, "RetransSegs")
+			self.TCP.InErrs = readField(positions, fields, "InErrs")
+			self.TCP.OutRsts = readField(positions, fields, "OutRsts")
+
+		case "Udp:":
+			self.UDP.InDatagrams = readField(positions, fields, "InDatagrams")
+			self.UDP.OutDatagrams = readField(positions, fields, "OutDatagrams")
+			self.UDP.InErrors = readField(positions, fields, "InErrors")
+			self.UDP.NoPorts = readField(positions, fields, "NoPorts")
+			self.UDP.RcvbufErrors = readField(positions, fields, "RcvbufErrors")
+			self.UDP.SndbufErrors = readField(positions, fields, "SndbufErrors")
+		}
+		return true
+	})
+}
 
 func (self *NetIfaceList) Get() error {
 	capacity := len(self.List)
