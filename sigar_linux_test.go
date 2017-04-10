@@ -38,6 +38,13 @@ var _ = Describe("sigarLinux", func() {
 		sigar.Etcd = "/etc"
 	})
 
+	It("Parses integers correctly", func() {
+		Expect(sigar.ReadUint("123")).To(Equal(uint64(123)))
+		Expect(sigar.ReadUint("123\n456")).To(Equal(uint64(0)))
+		Expect(sigar.ReadUint("-1")).To(Equal(uint64(0)))
+		Expect(sigar.ReadUint("abc")).To(Equal(uint64(0)))
+	})
+
 	Describe("CPU", func() {
 		var (
 			statFile string
@@ -564,14 +571,18 @@ Inter-|   Receive                                                |  Transmit
 			netEth0MtuFile := sysd + "/class/net/eth0/mtu"
 			netEth0AddrFile := sysd + "/class/net/eth0/address"
 			netEth0CarrierFile := sysd + "/class/net/eth0/carrier"
-			mtu := "1500"
-			address := "08:00:27:6b:1c:dd"
-			linkStat := "1"
+
+			// Sample values. The newline is present on a real system
+			mtu := "1500\n"
+			address := "08:00:27:6b:1c:dd\n"
+			linkStat := "1\n"
 
 			err = os.MkdirAll(sysd+"/class/net/eth0/", 0777)
 			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(netEth0MtuFile, []byte(mtu), 0444)
+			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(netEth0AddrFile, []byte(address), 0444)
+			Expect(err).ToNot(HaveOccurred())
 			err = ioutil.WriteFile(netEth0CarrierFile, []byte(linkStat), 0444)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -626,7 +637,7 @@ Inter-|   Receive                                                |  Transmit
 
 			Expect(netStat.List[0].MTU).To(Equal(uint64(0)))
 			Expect(netStat.List[0].Mac).To(Equal(""))
-			Expect(netStat.List[0].LinkStatus).To(Equal(""))
+			Expect(netStat.List[0].LinkStatus).To(Equal("UNKNOWN"))
 
 			Expect(netStat.List[1].MTU).To(Equal(uint64(1500)))
 			Expect(netStat.List[1].Mac).To(Equal("08:00:27:6b:1c:dd"))

@@ -317,24 +317,18 @@ func (self *NetIfaceList) Get() error {
 		mtuFile := fmt.Sprintf("%v/class/net/%v/mtu", Sysd, ifaceList[i].Name)
 		macFile := fmt.Sprintf("%v/class/net/%v/address", Sysd, ifaceList[i].Name)
 		linkStatFile := fmt.Sprintf("%v/class/net/%v/carrier", Sysd, ifaceList[i].Name)
-		mtu, err := ioutil.ReadFile(mtuFile)
-		if err == nil {
-			ifaceList[i].MTU, _ = strtoull(string(mtu))
-		}
-		macAddr, err := ioutil.ReadFile(macFile)
-		if err == nil {
-			ifaceList[i].Mac = string(macAddr)
-		}
-		linkStat, err := ioutil.ReadFile(linkStatFile)
-		if err == nil {
-			switch string(linkStat) {
-			case "0":
-				ifaceList[i].LinkStatus = "DOWN"
-			case "1":
-				ifaceList[i].LinkStatus = "UP"
-			default:
-				ifaceList[i].LinkStatus = "UNKNOWN"
-			}
+
+		ifaceList[i].MTU = ReadUint(readFileLine(mtuFile))
+		ifaceList[i].Mac = readFileLine(macFile)
+
+		linkStat := readFileLine(linkStatFile)
+		switch linkStat {
+		case "0":
+			ifaceList[i].LinkStatus = "DOWN"
+		case "1":
+			ifaceList[i].LinkStatus = "UP"
+		default:
+			ifaceList[i].LinkStatus = "UNKNOWN"
 		}
 	}
 
@@ -791,6 +785,28 @@ func readFile(file string, handler func(string) bool) error {
 	}
 
 	return nil
+}
+
+// Read the first line of a file, ignoring any error
+func readFileLine(file string) string {
+	f, err := os.Open(file)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	line, _ := reader.ReadString('\n')
+	return strings.TrimSpace(line)
+}
+
+// Convert the value to an uint64, ignoring any error
+func ReadUint(val string) uint64 {
+	result, err := strconv.ParseUint(val, 10, 64)
+	if err == nil {
+		return result
+	}
+	return 0
 }
 
 func strtoull(val string) (uint64, error) {
