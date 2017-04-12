@@ -1,6 +1,7 @@
 package sigar_test
 
 import (
+	"runtime"
 	"time"
 
 	. "github.com/scalingdata/ginkgo"
@@ -21,7 +22,11 @@ var _ = Describe("ConcreteSigar", func() {
 			samplesCh, stop := concreteSigar.CollectCpuStats(500 * time.Millisecond)
 
 			firstValue := <-samplesCh
-			Expect(firstValue.User).To(BeNumerically(">", 0))
+			if runtime.GOOS == "darwin" {
+				Expect(firstValue.User).To(Equal(uint64(0)))
+			} else {
+				Expect(firstValue.User).To(BeNumerically(">", 0))
+			}
 
 			stop <- struct{}{}
 		})
@@ -32,7 +37,12 @@ var _ = Describe("ConcreteSigar", func() {
 			firstValue := <-samplesCh
 
 			secondValue := <-samplesCh
-			Expect(secondValue.User).To(BeNumerically("<", firstValue.User))
+			if runtime.GOOS == "darwin" {
+				Expect(firstValue.User).To(Equal(uint64(0)))
+				Expect(secondValue.User).To(Equal(uint64(0)))
+			} else {
+				Expect(secondValue.User).To(BeNumerically("<", firstValue.User))
+			}
 
 			stop <- struct{}{}
 		})
@@ -56,7 +66,11 @@ var _ = Describe("ConcreteSigar", func() {
 		Expect(avg.Five).ToNot(BeNil())
 		Expect(avg.Fifteen).ToNot(BeNil())
 
-		Expect(err).ToNot(HaveOccurred())
+		if runtime.GOOS == "windows" {
+			Expect(err).To(Equal(sigar.ErrNotImplemented))
+		} else {
+			Expect(err).ToNot(HaveOccurred())
+		}
 	})
 
 	It("GetMem", func() {

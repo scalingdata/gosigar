@@ -1,6 +1,7 @@
 package sigar
 
 import (
+	"errors"
 	"net"
 	"time"
 )
@@ -14,6 +15,8 @@ type Sigar interface {
 	GetSystemInfo() (SystemInfo, error)
 	GetSystemDistribution() (SystemDistribution, error)
 }
+
+var ErrNotImplemented error = errors.New("Collection not implemented for this operating system")
 
 type Cpu struct {
 	User    uint64

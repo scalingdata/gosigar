@@ -127,11 +127,11 @@ func init() {
 }
 
 func (self *LoadAverage) Get() error {
-	return nil
+	return notImplemented()
 }
 
 func (self *Uptime) Get() error {
-	return nil
+	return notImplemented()
 }
 
 func (self *Mem) Get() error {
@@ -356,16 +356,16 @@ func (self *NetIfaceList) Get() error {
 	}
 	self.List = make([]NetIface, 0)
 	for iface, res := range queryResults {
-		ifaceStruct := NetIface {
-			Name: iface,
-			SendBytes: res[0],
-			RecvBytes: res[1],
-			SendPackets: res[2],
-			RecvPackets: res[3],
-			SendErrors: res[4],
-			RecvErrors: res[5],
-			SendDropped: res[6],
-			RecvDropped: res[7],
+		ifaceStruct := NetIface{
+			Name:          iface,
+			SendBytes:     res[0],
+			RecvBytes:     res[1],
+			SendPackets:   res[2],
+			RecvPackets:   res[3],
+			SendErrors:    res[4],
+			RecvErrors:    res[5],
+			SendDropped:   res[6],
+			RecvDropped:   res[7],
 			RecvMulticast: res[8],
 		}
 		self.List = append(self.List, ifaceStruct)
@@ -375,41 +375,41 @@ func (self *NetIfaceList) Get() error {
 
 func convertTcpState(state C.DWORD) NetConnState {
 	switch state {
-		case C.MIB_TCP_STATE_CLOSED:
-			return ConnStateClose
-		case C.MIB_TCP_STATE_LISTEN:
-			return ConnStateListen
-		case C.MIB_TCP_STATE_SYN_SENT:
-			return ConnStateSynSent
-		case C.MIB_TCP_STATE_SYN_RCVD:
-			return ConnStateSynRecv
-		case C.MIB_TCP_STATE_ESTAB:
-			return ConnStateEstablished
-		case C.MIB_TCP_STATE_FIN_WAIT1:
-			return ConnStateFinWait1
-		case C.MIB_TCP_STATE_FIN_WAIT2:
-			return ConnStateFinWait2
-		case C.MIB_TCP_STATE_CLOSE_WAIT:
-			return ConnStateCloseWait
-		case C.MIB_TCP_STATE_CLOSING:
-			return ConnStateClosing
-		case C.MIB_TCP_STATE_LAST_ACK:
-			return ConnStateLastAck
-		case C.MIB_TCP_STATE_TIME_WAIT:
-			return ConnStateTimeWait
-		default:
-			return 0
+	case C.MIB_TCP_STATE_CLOSED:
+		return ConnStateClose
+	case C.MIB_TCP_STATE_LISTEN:
+		return ConnStateListen
+	case C.MIB_TCP_STATE_SYN_SENT:
+		return ConnStateSynSent
+	case C.MIB_TCP_STATE_SYN_RCVD:
+		return ConnStateSynRecv
+	case C.MIB_TCP_STATE_ESTAB:
+		return ConnStateEstablished
+	case C.MIB_TCP_STATE_FIN_WAIT1:
+		return ConnStateFinWait1
+	case C.MIB_TCP_STATE_FIN_WAIT2:
+		return ConnStateFinWait2
+	case C.MIB_TCP_STATE_CLOSE_WAIT:
+		return ConnStateCloseWait
+	case C.MIB_TCP_STATE_CLOSING:
+		return ConnStateClosing
+	case C.MIB_TCP_STATE_LAST_ACK:
+		return ConnStateLastAck
+	case C.MIB_TCP_STATE_TIME_WAIT:
+		return ConnStateTimeWait
+	default:
+		return 0
 	}
-} 
+}
 
 /* Helper methods to convert IPv4 and IPv6 representations to Go byte arrays */
 func UlongToBytes(addr C.u_long) []byte {
-	return []byte{byte((addr & 0xFF000000)>>24), byte((addr & 0x00FF0000) >> 16), byte((addr & 0x0000FF00) >> 8), byte(addr & 0x000000FF)}
+	return []byte{byte((addr & 0xFF000000) >> 24), byte((addr & 0x00FF0000) >> 16), byte((addr & 0x0000FF00) >> 8), byte(addr & 0x000000FF)}
 }
 
 func In6AddrToBytes(addr C.IN6_ADDR) []byte {
 	outputAddr := make([]byte, 16)
-	for i :=0; i < 16; i++ {
+	for i := 0; i < 16; i++ {
 		outputAddr[i] = byte(addr.u[i])
 	}
 	return outputAddr
@@ -420,28 +420,28 @@ func tcpTableElement(table C.PMIB_TCPTABLE, index C.DWORD) C.PMIB_TCPROW {
 	if index >= table.dwNumEntries {
 		return nil
 	}
-	return C.PMIB_TCPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+	return C.PMIB_TCPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0])*uintptr(index)))
 }
 
 func udpTableElement(table C.PMIB_UDPTABLE, index C.DWORD) C.PMIB_UDPROW {
 	if index >= table.dwNumEntries {
 		return nil
 	}
-	return C.PMIB_UDPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+	return C.PMIB_UDPROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0])*uintptr(index)))
 }
 
 func tcp6TableElement(table C.PMIB_TCP6TABLE, index C.DWORD) C.PMIB_TCP6ROW {
 	if index >= table.dwNumEntries {
 		return nil
 	}
-	return C.PMIB_TCP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+	return C.PMIB_TCP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0])*uintptr(index)))
 }
 
 func udp6TableElement(table C.PMIB_UDP6TABLE, index C.DWORD) C.PMIB_UDP6ROW {
 	if index >= table.dwNumEntries {
 		return nil
 	}
-	return C.PMIB_UDP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0]) * uintptr(index)))
+	return C.PMIB_UDP6ROW(unsafe.Pointer(uintptr(unsafe.Pointer(&table.table)) + unsafe.Sizeof(table.table[0])*uintptr(index)))
 }
 
 func (self *NetTcpConnList) Get() error {
@@ -460,13 +460,13 @@ func (self *NetTcpConnList) Get() error {
 		localAddr := C.htonl(C.u_long(elem.dwLocalAddr))
 		remoteAddr := C.htonl(C.u_long(elem.dwRemoteAddr))
 		conn := NetConn{
-			Status: convertTcpState(elem.dwState),
-			LocalAddr: UlongToBytes(localAddr),
+			Status:     convertTcpState(elem.dwState),
+			LocalAddr:  UlongToBytes(localAddr),
 			RemoteAddr: UlongToBytes(remoteAddr),
-			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			LocalPort:  uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
 			RemotePort: uint64(C.ntohs(C.u_short(elem.dwRemotePort))),
 		}
-		self.List = append(self.List, conn)	
+		self.List = append(self.List, conn)
 	}
 	return nil
 }
@@ -489,7 +489,7 @@ func (self *NetUdpConnList) Get() error {
 			LocalAddr: UlongToBytes(localAddr),
 			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
 		}
-		self.List = append(self.List, conn)	
+		self.List = append(self.List, conn)
 	}
 	return nil
 }
@@ -508,15 +508,15 @@ func (self *NetTcpV6ConnList) Get() error {
 			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
 		}
 		conn := NetConn{
-			Status: convertTcpState(C.DWORD(elem.State)),
-			LocalAddr: In6AddrToBytes(elem.LocalAddr),
+			Status:     convertTcpState(C.DWORD(elem.State)),
+			LocalAddr:  In6AddrToBytes(elem.LocalAddr),
 			RemoteAddr: In6AddrToBytes(elem.RemoteAddr),
-			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			LocalPort:  uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
 			RemotePort: uint64(C.ntohs(C.u_short(elem.dwRemotePort))),
 		}
-		self.List = append(self.List, conn)	
+		self.List = append(self.List, conn)
 	}
-	return nil	
+	return nil
 }
 
 func (self *NetUdpV6ConnList) Get() error {
@@ -533,12 +533,20 @@ func (self *NetUdpV6ConnList) Get() error {
 			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
 		}
 		conn := NetConn{
-			LocalAddr:  In6AddrToBytes(elem.dwLocalAddr),
+			LocalAddr: In6AddrToBytes(elem.dwLocalAddr),
 			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
 		}
-		self.List = append(self.List, conn)	
+		self.List = append(self.List, conn)
 	}
 	return nil
+}
+
+func (self *NetProtoV4Stats) Get() error {
+	return notImplemented()
+}
+
+func (self *NetProtoV6Stats) Get() error {
+	return notImplemented()
 }
 
 func (self *SystemInfo) Get() error {
@@ -552,6 +560,5 @@ func (self *SystemDistribution) Get() error {
 }
 
 func notImplemented() error {
-	panic("Not Implemented")
-	return nil
+	return ErrNotImplemented
 }

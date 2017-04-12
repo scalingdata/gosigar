@@ -19,7 +19,7 @@ type WindowsVolumeIterator struct {
 }
 
 // Get the first mount point for the volume. If we get an ERROR_MORE_DATA,
-// don't return an error, but return the expected buffer size. 
+// don't return an error, but return the expected buffer size.
 // You can attempt to call the method again with the larger buffer size
 func getVolumePathName(wideName []uint16, bufferSize uint16) (string, error, uint16) {
 	charsLen := C.DWORD(bufferSize)

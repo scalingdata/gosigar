@@ -145,6 +145,18 @@ func (self *CpuList) Get() error {
 	return nil
 }
 
+func (self *NetProtoV4Stats) Get() error {
+	return notImplemented()
+}
+
+func (self *NetProtoV6Stats) Get() error {
+	return notImplemented()
+}
+
+func (self *NetIfaceList) Get() error {
+	return notImplemented()
+}
+
 func (self *FileSystemList) Get() error {
 	num, err := getfsstat(nil, C.MNT_NOWAIT)
 	if num < 0 {
@@ -212,7 +224,7 @@ func (self *ProcList) Get() error {
 }
 
 func (self *ProcState) Get(pid int) error {
-  return notImplemented()
+	return notImplemented()
 }
 
 func (self *ProcMem) Get(pid int) error {
@@ -434,6 +446,5 @@ func (self *SystemDistribution) Get() error {
 }
 
 func notImplemented() error {
-	panic("Not Implemented")
-	return nil
+	return ErrNotImplemented
 }

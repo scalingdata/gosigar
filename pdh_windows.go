@@ -10,7 +10,7 @@ import (
 
 // An error encountered calling PDH
 type PdhError struct {
-	errno uint32
+	errno  uint32
 	method string
 }
 
@@ -19,24 +19,24 @@ func (self *PdhError) Error() string {
 }
 
 func NewPdhError(method string, errno uint32) *PdhError {
-	return &PdhError {
-		errno: errno,
+	return &PdhError{
+		errno:  errno,
 		method: method,
 	}
 }
 
 // An error encountered working with a specific PDH counter
 type PdhCounterError struct {
-	errno uint32
+	errno  uint32
 	method string
-	query string
+	query  string
 }
 
 func NewPdhCounterError(method, query string, errno uint32) *PdhCounterError {
-	return &PdhCounterError {
-		errno: errno,
+	return &PdhCounterError{
+		errno:  errno,
 		method: method,
-		query: query,
+		query:  query,
 	}
 }
 

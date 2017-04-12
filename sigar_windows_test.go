@@ -1,10 +1,9 @@
 package sigar_test
 
 import (
-	"os"
-	"fmt"
 	. "github.com/scalingdata/ginkgo"
 	. "github.com/scalingdata/gomega"
+	"os"
 
 	sigar "github.com/scalingdata/gosigar"
 )
@@ -40,7 +39,7 @@ var _ = Describe("SigarWindows", func() {
 
 		It("doesn't expand needlessly", func() {
 			fsList := sigar.FileSystemList{}
-			for i :=0; i<100; i++ {
+			for i := 0; i < 100; i++ {
 				err := fsList.Get()
 				Ω(err).ShouldNot(HaveOccurred())
 			}
@@ -92,7 +91,6 @@ var _ = Describe("SigarWindows", func() {
 			netList := sigar.NetIfaceList{}
 			err := netList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
-			fmt.Printf("IfaceList: %v\n", netList)
 		})
 	})
 
@@ -101,25 +99,21 @@ var _ = Describe("SigarWindows", func() {
 			connList := sigar.NetTcpConnList{}
 			err := connList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
-			fmt.Printf("Connections: %v\n", connList)
 		})
 		It("gets UDP IPv4 conns", func() {
 			connList := sigar.NetUdpConnList{}
 			err := connList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
-			fmt.Printf("Connections: %v\n", connList)
 		})
 		It("gets TCP IPv6 conns", func() {
 			connList := sigar.NetTcpV6ConnList{}
 			err := connList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
-			fmt.Printf("Connections: %v\n", connList)
 		})
 		It("gets UDP IPv6 conns", func() {
 			connList := sigar.NetUdpV6ConnList{}
 			err := connList.Get()
 			Ω(err).ShouldNot(HaveOccurred())
-			fmt.Printf("Connections: %v\n", connList)
 		})
 	})
 
