@@ -385,7 +385,7 @@ major minor  #blocks  name
 		BeforeEach(func() {
 			netSnmpContents := ` 
 Ip: Forwarding DefaultTTL InReceives InHdrErrors InAddrErrors ForwDatagrams InUnknownProtos InDiscards InDelivers OutRequests OutDiscards OutNoRoutes ReasmTimeout ReasmReqds ReasmOKs ReasmFails FragOKs FragFails FragCreates
-Ip: 2 64 1055501 0 56 1 0 2 1055445 503315 0 3 0 0 0 0 0 0 0
+Ip: 2 64 1055501 33 56 1 44 2 1055445 503315 55 3 0 0 0 0 0 0 0
 Icmp: InMsgs InErrors InDestUnreachs InTimeExcds InParmProbs InSrcQuenchs InRedirects InEchos InEchoReps InTimestamps InTimestampReps InAddrMasks InAddrMaskReps OutMsgs OutErrors OutDestUnreachs OutTimeExcds OutParmProbs OutSrcQuenchs OutRedirects OutEchos OutEchoReps OutTimestamps OutTimestampReps OutAddrMasks OutAddrMaskReps
 Icmp: 83 1 12 0 0 0 0 30 41 0 0 0 0 71 2 33 0 0 0 0 41 30 0 0 0 0
 IcmpMsg: InType0 InType3 InType8 OutType0 OutType8
@@ -408,11 +408,15 @@ UdpLite: 0 0 0 0 0 0`
 			err := netStat.Get()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(netStat.IP.InReceives).To(Equal(uint64(1055501)))
+			Expect(netStat.IP.InHdrErrors).To(Equal(uint64(33)))
 			Expect(netStat.IP.InAddrErrors).To(Equal(uint64(56)))
 			Expect(netStat.IP.ForwDatagrams).To(Equal(uint64(1)))
 			Expect(netStat.IP.InDelivers).To(Equal(uint64(1055445)))
 			Expect(netStat.IP.InDiscards).To(Equal(uint64(2)))
+			Expect(netStat.IP.InUnknownProtos).To(Equal(uint64(44)))
 			Expect(netStat.IP.OutRequests).To(Equal(uint64(503315)))
+			Expect(netStat.IP.OutDiscards).To(Equal(uint64(55)))
+			Expect(netStat.IP.OutNoRoutes).To(Equal(uint64(3)))
 
 			Expect(netStat.ICMP.InMsgs).To(Equal(uint64(83)))
 			Expect(netStat.ICMP.InErrors).To(Equal(uint64(1)))
@@ -425,6 +429,7 @@ UdpLite: 0 0 0 0 0 0`
 			Expect(netStat.TCP.PassiveOpens).To(Equal(uint64(386)))
 			Expect(netStat.TCP.AttemptFails).To(Equal(uint64(385)))
 			Expect(netStat.TCP.EstabResets).To(Equal(uint64(66)))
+			Expect(netStat.TCP.CurrEstab).To(Equal(uint64(2)))
 			Expect(netStat.TCP.InSegs).To(Equal(uint64(1053372)))
 			Expect(netStat.TCP.OutSegs).To(Equal(uint64(501082)))
 			Expect(netStat.TCP.RetransSegs).To(Equal(uint64(24)))

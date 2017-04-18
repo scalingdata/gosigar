@@ -92,21 +92,20 @@ var _ = Describe("Sigar", func() {
 	It("net proto v4", func() {
 		net := NetProtoV4Stats{}
 		err := net.Get()
-		if runtime.GOOS == "linux" {
-			Expect(err).ToNot(HaveOccurred())
-		} else {
+		if runtime.GOOS == "darwin" {
 			Expect(err).To(Equal(ErrNotImplemented))
+		} else {
+			Expect(err).ToNot(HaveOccurred())
 		}
-
 	})
 
 	It("net proto v6", func() {
 		net := NetProtoV6Stats{}
 		err := net.Get()
-		if runtime.GOOS == "linux" {
-			Expect(err).ToNot(HaveOccurred())
-		} else {
+		if runtime.GOOS == "darwin" {
 			Expect(err).To(Equal(ErrNotImplemented))
+		} else {
+			Expect(err).ToNot(HaveOccurred())
 		}
 	})
 

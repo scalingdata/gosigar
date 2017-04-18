@@ -117,6 +117,19 @@ var _ = Describe("SigarWindows", func() {
 		})
 	})
 
+	Describe("NetProtoStats", func() {
+		It("gets IPv4", func() {
+			stats := sigar.NetProtoV4Stats{}
+			err := stats.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+		})
+		It("gets IPv6", func() {
+			stats := sigar.NetProtoV6Stats{}
+			err := stats.Get()
+			Ω(err).ShouldNot(HaveOccurred())
+		})
+	})
+
 	Describe("SystemInfo", func() {
 		It("gets system info", func() {
 			si := sigar.SystemInfo{}

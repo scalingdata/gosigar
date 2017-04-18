@@ -118,6 +118,7 @@ PMIB_UDP6TABLE getUdp6Table(PDWORD err) {
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"unsafe"
@@ -542,11 +543,111 @@ func (self *NetUdpV6ConnList) Get() error {
 }
 
 func (self *NetProtoV4Stats) Get() error {
-	return notImplemented()
+	protoV4Queries := []string{
+		`\TCPv4\Connections Active`,
+		`\TCPv4\Connections Passive`,
+		`\TCPv4\Connection Failures`,
+		`\TCPv4\Connections Reset`,
+		`\TCPv4\Connections Established`,
+
+		`\UDPv4\Datagrams Received Errors`,
+
+		`\IPv4\Datagrams Received Header Errors`,
+		`\IPv4\Datagrams Received Address Errors`,
+		`\IPv4\Datagrams Received Discarded`,
+		`\IPv4\Datagrams Received Unknown Protocol`,
+		`\IPv4\Datagrams Outbound Discarded`,
+		`\IPv4\Datagrams Outbound No Route`,
+
+		`\ICMP\Messages Received Errors`,
+		`\ICMP\Received Dest. Unreachable`,
+		`\ICMP\Messages Outbound Errors`,
+		`\ICMP\Sent Destination Unreachable`,
+	}
+
+	results, err := runRawPdhQueries(protoV4Queries)
+	if err != nil {
+		return err
+	}
+	if len(results) != len(protoV4Queries) {
+		return errors.New("Incorrect results length")
+	}
+
+	self.TCP.ActiveOpens, results = uint64(results[0]), results[1:]
+	self.TCP.PassiveOpens, results = uint64(results[0]), results[1:]
+	self.TCP.AttemptFails, results = uint64(results[0]), results[1:]
+	self.TCP.EstabResets, results = uint64(results[0]), results[1:]
+	self.TCP.CurrEstab, results = uint64(results[0]), results[1:]
+
+	self.UDP.InErrors, results = uint64(results[0]), results[1:]
+
+	self.IP.InHdrErrors, results = uint64(results[0]), results[1:]
+	self.IP.InAddrErrors, results = uint64(results[0]), results[1:]
+	self.IP.InDiscards, results = uint64(results[0]), results[1:]
+	self.IP.InUnknownProtos, results = uint64(results[0]), results[1:]
+	self.IP.OutDiscards, results = uint64(results[0]), results[1:]
+	self.IP.OutNoRoutes, results = uint64(results[0]), results[1:]
+
+	self.ICMP.InErrors, results = uint64(results[0]), results[1:]
+	self.ICMP.InDestUnreachs, results = uint64(results[0]), results[1:]
+	self.ICMP.OutErrors, results = uint64(results[0]), results[1:]
+	self.ICMP.OutDestUnreachs, results = uint64(results[0]), results[1:]
+
+	return nil
 }
 
 func (self *NetProtoV6Stats) Get() error {
-	return notImplemented()
+	protoV6Queries := []string{
+		`\TCPv6\Connections Active`,
+		`\TCPv6\Connections Passive`,
+		`\TCPv6\Connection Failures`,
+		`\TCPv6\Connections Reset`,
+		`\TCPv6\Connections Established`,
+
+		`\UDPv6\Datagrams Received Errors`,
+
+		`\IPv6\Datagrams Received Header Errors`,
+		`\IPv6\Datagrams Received Address Errors`,
+		`\IPv6\Datagrams Received Discarded`,
+		`\IPv6\Datagrams Received Unknown Protocol`,
+		`\IPv6\Datagrams Outbound Discarded`,
+		`\IPv6\Datagrams Outbound No Route`,
+
+		`\ICMPv6\Messages Received Errors`,
+		`\ICMPv6\Received Dest. Unreachable`,
+		`\ICMPv6\Messages Outbound Errors`,
+		`\ICMPv6\Sent Destination Unreachable`,
+	}
+
+	results, err := runRawPdhQueries(protoV6Queries)
+	if err != nil {
+		return err
+	}
+	if len(results) != len(protoV6Queries) {
+		return errors.New("Incorrect results length")
+	}
+
+	self.TCP.ActiveOpens, results = uint64(results[0]), results[1:]
+	self.TCP.PassiveOpens, results = uint64(results[0]), results[1:]
+	self.TCP.AttemptFails, results = uint64(results[0]), results[1:]
+	self.TCP.EstabResets, results = uint64(results[0]), results[1:]
+	self.TCP.CurrEstab, results = uint64(results[0]), results[1:]
+
+	self.UDP.InErrors, results = uint64(results[0]), results[1:]
+
+	self.IP.InHdrErrors, results = uint64(results[0]), results[1:]
+	self.IP.InAddrErrors, results = uint64(results[0]), results[1:]
+	self.IP.InDiscards, results = uint64(results[0]), results[1:]
+	self.IP.InUnknownProtos, results = uint64(results[0]), results[1:]
+	self.IP.OutDiscards, results = uint64(results[0]), results[1:]
+	self.IP.OutNoRoutes, results = uint64(results[0]), results[1:]
+
+	self.ICMP.InErrors, results = uint64(results[0]), results[1:]
+	self.ICMP.InDestUnreachs, results = uint64(results[0]), results[1:]
+	self.ICMP.OutErrors, results = uint64(results[0]), results[1:]
+	self.ICMP.OutDestUnreachs, results = uint64(results[0]), results[1:]
+
+	return nil
 }
 
 func (self *SystemInfo) Get() error {

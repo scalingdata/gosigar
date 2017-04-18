@@ -224,11 +224,15 @@ func (self *NetProtoV4Stats) Get() error {
 		switch protocol {
 		case "Ip:":
 			self.IP.InReceives = readField(positions, fields, "InReceives")
+			self.IP.InHdrErrors = readField(positions, fields, "InHdrErrors")
 			self.IP.InAddrErrors = readField(positions, fields, "InAddrErrors")
 			self.IP.ForwDatagrams = readField(positions, fields, "ForwDatagrams")
 			self.IP.InDelivers = readField(positions, fields, "InDelivers")
 			self.IP.InDiscards = readField(positions, fields, "InDiscards")
+			self.IP.InUnknownProtos = readField(positions, fields, "InUnknownProtos")
 			self.IP.OutRequests = readField(positions, fields, "OutRequests")
+			self.IP.OutDiscards = readField(positions, fields, "OutDiscards")
+			self.IP.OutNoRoutes = readField(positions, fields, "OutNoRoutes")
 
 		case "Icmp:":
 			self.ICMP.InMsgs = readField(positions, fields, "InMsgs")
@@ -243,6 +247,7 @@ func (self *NetProtoV4Stats) Get() error {
 			self.TCP.PassiveOpens = readField(positions, fields, "PassiveOpens")
 			self.TCP.AttemptFails = readField(positions, fields, "AttemptFails")
 			self.TCP.EstabResets = readField(positions, fields, "EstabResets")
+			self.TCP.CurrEstab = readField(positions, fields, "CurrEstab")
 			self.TCP.InSegs = readField(positions, fields, "InSegs")
 			self.TCP.OutSegs = readField(positions, fields, "OutSegs")
 			self.TCP.RetransSegs = readField(positions, fields, "RetransSegs")

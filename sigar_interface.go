@@ -107,16 +107,21 @@ type NetProtoV4Stats struct {
 type NetProtoV6Stats struct {
 	IP   IPStats
 	ICMP ICMPStats
+	TCP  TCPStats
 	UDP  UDPStats
 }
 
 type IPStats struct {
-	InReceives    uint64
-	InAddrErrors  uint64
-	ForwDatagrams uint64
-	InDelivers    uint64
-	InDiscards    uint64
-	OutRequests   uint64
+	InReceives      uint64
+	InHdrErrors     uint64
+	InAddrErrors    uint64
+	ForwDatagrams   uint64
+	InDelivers      uint64
+	InDiscards      uint64
+	InUnknownProtos uint64
+	OutRequests     uint64
+	OutDiscards     uint64
+	OutNoRoutes     uint64
 }
 
 type ICMPStats struct {
@@ -133,6 +138,7 @@ type TCPStats struct {
 	PassiveOpens uint64
 	AttemptFails uint64
 	EstabResets  uint64
+	CurrEstab    uint64 // Instantaneous value of currently established connections
 	InSegs       uint64
 	OutSegs      uint64
 	RetransSegs  uint64
