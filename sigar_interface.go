@@ -201,6 +201,34 @@ const (
 	ConnStateClosing
 )
 
+func (self NetConnState) String() string {
+	switch self {
+	case ConnStateEstablished:
+		return "established"
+	case ConnStateSynSent:
+		return "syn_sent"
+	case ConnStateSynRecv:
+		return "syn_recv"
+	case ConnStateFinWait1:
+		return "fin_wait1"
+	case ConnStateFinWait2:
+		return "fin_wait2"
+	case ConnStateTimeWait:
+		return "time_wait"
+	case ConnStateClose:
+		return "close"
+	case ConnStateCloseWait:
+		return "close_wait"
+	case ConnStateLastAck:
+		return "last_ack"
+	case ConnStateListen:
+		return "listen"
+	case ConnStateClosing:
+		return "closing"
+	}
+	return ""
+}
+
 type NetConn struct {
 	LocalAddr  net.IP
 	RemoteAddr net.IP

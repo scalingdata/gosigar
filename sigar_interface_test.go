@@ -234,4 +234,18 @@ var _ = Describe("Sigar", func() {
 		err := dist.Get()
 		Expect(err).ToNot(HaveOccurred())
 	})
+
+	It("returns NetConnState string", func() {
+		Expect(ConnStateEstablished.String()).To(Equal("established"))
+		Expect(ConnStateSynSent.String()).To(Equal("syn_sent"))
+		Expect(ConnStateSynRecv.String()).To(Equal("syn_recv"))
+		Expect(ConnStateFinWait1.String()).To(Equal("fin_wait1"))
+		Expect(ConnStateFinWait2.String()).To(Equal("fin_wait2"))
+		Expect(ConnStateTimeWait.String()).To(Equal("time_wait"))
+		Expect(ConnStateClose.String()).To(Equal("close"))
+		Expect(ConnStateCloseWait.String()).To(Equal("close_wait"))
+		Expect(ConnStateLastAck.String()).To(Equal("last_ack"))
+		Expect(ConnStateListen.String()).To(Equal("listen"))
+		Expect(ConnStateClosing.String()).To(Equal("closing"))
+	})
 })
