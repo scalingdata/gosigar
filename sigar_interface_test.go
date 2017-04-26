@@ -119,6 +119,38 @@ var _ = Describe("Sigar", func() {
 		}
 	})
 
+	It("net connection lists", func() {
+		// Test connLists available on Windows/Linux
+		connLists := []Getter{
+			&NetTcpConnList{},
+			&NetUdpConnList{},
+			&NetTcpV6ConnList{},
+			&NetUdpV6ConnList{},
+		}
+		for _, connList := range connLists {
+			err := connList.Get()
+			if runtime.GOOS == "darwin" {
+				Expect(err).To(Equal(ErrNotImplemented))
+			} else {
+				Expect(err).ToNot(HaveOccurred())
+			}
+		}
+
+		// Test connLists available only on Linux
+		connLists = []Getter{
+			&NetRawConnList{},
+			&NetRawV6ConnList{},
+		}
+		for _, connList := range connLists {
+			err := connList.Get()
+			if runtime.GOOS == "linux" {
+				Expect(err).ToNot(HaveOccurred())
+			} else {
+				Expect(err).To(Equal(ErrNotImplemented))
+			}
+		}
+	})
+
 	It("proc list", func() {
 		pids := ProcList{}
 		err := pids.Get()

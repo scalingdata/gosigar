@@ -18,6 +18,11 @@ type Sigar interface {
 
 var ErrNotImplemented error = errors.New("Collection not implemented for this operating system")
 
+// Simple Get() that returns an error
+type Getter interface {
+	Get() error
+}
+
 type Cpu struct {
 	User    uint64
 	Nice    uint64

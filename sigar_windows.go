@@ -495,6 +495,10 @@ func (self *NetUdpConnList) Get() error {
 	return nil
 }
 
+func (self *NetRawConnList) Get() error {
+	return notImplemented()
+}
+
 func (self *NetTcpV6ConnList) Get() error {
 	var err C.DWORD
 	table := C.getTcp6Table(&err)
@@ -540,6 +544,10 @@ func (self *NetUdpV6ConnList) Get() error {
 		self.List = append(self.List, conn)
 	}
 	return nil
+}
+
+func (self *NetRawV6ConnList) Get() error {
+	return notImplemented()
 }
 
 func (self *NetProtoV4Stats) Get() error {

@@ -191,6 +191,30 @@ func (self *DiskList) Get() error {
 	return notImplemented()
 }
 
+func (self *NetTcpConnList) Get() error {
+	return notImplemented()
+}
+
+func (self *NetUdpConnList) Get() error {
+	return notImplemented()
+}
+
+func (self *NetRawConnList) Get() error {
+	return notImplemented()
+}
+
+func (self *NetTcpV6ConnList) Get() error {
+	return notImplemented()
+}
+
+func (self *NetUdpV6ConnList) Get() error {
+	return notImplemented()
+}
+
+func (self *NetRawV6ConnList) Get() error {
+	return notImplemented()
+}
+
 func (self *ProcList) Get() error {
 	n := C.proc_listpids(C.PROC_ALL_PIDS, 0, nil, 0)
 	if n <= 0 {
