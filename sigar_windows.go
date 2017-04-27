@@ -461,6 +461,7 @@ func (self *NetTcpConnList) Get() error {
 		localAddr := C.htonl(C.u_long(elem.dwLocalAddr))
 		remoteAddr := C.htonl(C.u_long(elem.dwRemoteAddr))
 		conn := NetConn{
+			Proto:      ConnProtoTcp,
 			Status:     convertTcpState(elem.dwState),
 			LocalAddr:  UlongToBytes(localAddr),
 			RemoteAddr: UlongToBytes(remoteAddr),
@@ -489,6 +490,7 @@ func (self *NetUdpConnList) Get() error {
 		conn := NetConn{
 			LocalAddr: UlongToBytes(localAddr),
 			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			Proto:     ConnProtoUdp,
 		}
 		self.List = append(self.List, conn)
 	}
@@ -513,6 +515,7 @@ func (self *NetTcpV6ConnList) Get() error {
 			return fmt.Errorf("Error getting connection %v, beyond array bounds", i)
 		}
 		conn := NetConn{
+			Proto:      ConnProtoTcp,
 			Status:     convertTcpState(C.DWORD(elem.State)),
 			LocalAddr:  In6AddrToBytes(elem.LocalAddr),
 			RemoteAddr: In6AddrToBytes(elem.RemoteAddr),
@@ -540,6 +543,7 @@ func (self *NetUdpV6ConnList) Get() error {
 		conn := NetConn{
 			LocalAddr: In6AddrToBytes(elem.dwLocalAddr),
 			LocalPort: uint64(C.ntohs(C.u_short(elem.dwLocalPort))),
+			Proto:     ConnProtoUdp,
 		}
 		self.List = append(self.List, conn)
 	}

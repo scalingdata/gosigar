@@ -342,7 +342,7 @@ func (self *NetIfaceList) Get() error {
 }
 
 func (self *NetTcpConnList) Get() error {
-	list, err := readConnList(Procd+"/net/tcp", 4, 17)
+	list, err := readConnList(Procd+"/net/tcp", ConnProtoTcp, 4, 17)
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (self *NetTcpConnList) Get() error {
 }
 
 func (self *NetUdpConnList) Get() error {
-	list, err := readConnList(Procd+"/net/udp", 4, 13)
+	list, err := readConnList(Procd+"/net/udp", ConnProtoUdp, 4, 13)
 	if err != nil {
 		return err
 	}
@@ -360,7 +360,7 @@ func (self *NetUdpConnList) Get() error {
 }
 
 func (self *NetRawConnList) Get() error {
-	list, err := readConnList(Procd+"/net/raw", 4, 13)
+	list, err := readConnList(Procd+"/net/raw", ConnProtoRaw, 4, 13)
 	if err != nil {
 		return err
 	}
@@ -369,7 +369,7 @@ func (self *NetRawConnList) Get() error {
 }
 
 func (self *NetTcpV6ConnList) Get() error {
-	list, err := readConnList(Procd+"/net/tcp6", 16, 17)
+	list, err := readConnList(Procd+"/net/tcp6", ConnProtoTcp, 16, 17)
 	if err != nil {
 		return err
 	}
@@ -378,7 +378,7 @@ func (self *NetTcpV6ConnList) Get() error {
 }
 
 func (self *NetUdpV6ConnList) Get() error {
-	list, err := readConnList(Procd+"/net/udp6", 16, 13)
+	list, err := readConnList(Procd+"/net/udp6", ConnProtoUdp, 16, 13)
 	if err != nil {
 		return err
 	}
@@ -387,7 +387,7 @@ func (self *NetUdpV6ConnList) Get() error {
 }
 
 func (self *NetRawV6ConnList) Get() error {
-	list, err := readConnList(Procd+"/net/raw6", 16, 13)
+	list, err := readConnList(Procd+"/net/raw6", ConnProtoRaw, 16, 13)
 	if err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ func (self *NetRawV6ConnList) Get() error {
 /* Reads the format of the /proc/net/<proto> files, which have 2 header lines and a
    list of open connections. Different protocols have different numbers of trailing fields,
    but the first 5 are the same. */
-func readConnList(listFile string, ipSizeBytes, numFields int) ([]NetConn, error) {
+func readConnList(listFile string, proto NetConnProto, ipSizeBytes, numFields int) ([]NetConn, error) {
 	connList := make([]NetConn, 0)
 	err := readFile(listFile, func(line string) bool {
 		fields := strings.Fields(line)
@@ -428,6 +428,8 @@ func readConnList(listFile string, ipSizeBytes, numFields int) ([]NetConn, error
 		}
 
 		conn.Status = NetConnState(status)
+		conn.Proto = proto
+
 		queues := strings.Split(fields[4], ":")
 		if len(queues) != 2 {
 			return true

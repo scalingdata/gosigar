@@ -280,4 +280,10 @@ var _ = Describe("Sigar", func() {
 		Expect(ConnStateListen.String()).To(Equal("listen"))
 		Expect(ConnStateClosing.String()).To(Equal("closing"))
 	})
+
+	It("returns NetConnProto string", func() {
+		Expect(ConnProtoUdp.String()).To(Equal("udp"))
+		Expect(ConnProtoTcp.String()).To(Equal("tcp"))
+		Expect(ConnProtoRaw.String()).To(Equal("raw"))
+	})
 })

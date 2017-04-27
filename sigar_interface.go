@@ -2,6 +2,7 @@ package sigar
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"time"
 )
@@ -190,6 +191,26 @@ type NetIfaceList struct {
 	List []NetIface
 }
 
+type NetConnProto int
+
+const (
+	ConnProtoUdp = NetConnProto(iota + 1)
+	ConnProtoTcp
+	ConnProtoRaw
+)
+
+func (self NetConnProto) String() string {
+	switch self {
+	case ConnProtoUdp:
+		return "udp"
+	case ConnProtoTcp:
+		return "tcp"
+	case ConnProtoRaw:
+		return "raw"
+	}
+	return ""
+}
+
 type NetConnState int
 
 const (
@@ -242,6 +263,18 @@ type NetConn struct {
 	SendQueue  uint64
 	RecvQueue  uint64
 	Status     NetConnState
+	Proto      NetConnProto
+}
+
+func (self NetConn) String() string {
+	str := ""
+	switch self.Status {
+	case ConnStateListen:
+		str = fmt.Sprintf("Listen %s %s:%d", self.Proto, self.LocalAddr, self.LocalPort)
+	default:
+		str = fmt.Sprintf("%s %s:%d <-> %s:%d", self.Proto, self.LocalAddr, self.LocalPort, self.RemoteAddr, self.RemotePort)
+	}
+	return str
 }
 
 type NetTcpConnList struct {

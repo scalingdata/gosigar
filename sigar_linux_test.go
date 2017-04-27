@@ -674,6 +674,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateListen))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[0].String()).To(Equal("Listen tcp 0.0.0.0:22"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
 			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{10, 0, 2, 2}))
@@ -682,6 +684,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].SendQueue).To(Equal(uint64(490)))
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
+			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[1].String()).To(Equal("tcp 10.0.2.15:22 <-> 10.0.2.2:59276"))
 		})
 
 		It("parses UDP IPv4", func() {
@@ -707,6 +711,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[0].String()).To(Equal("udp 0.0.0.0:68 <-> 0.0.0.0:0"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
 			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0}))
@@ -715,6 +721,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].SendQueue).To(Equal(uint64(490)))
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateClose))
+			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[1].String()).To(Equal("udp 10.0.2.15:111 <-> 0.0.0.0:0"))
 		})
 
 		It("parses raw IPv4", func() {
@@ -739,6 +747,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(11)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(540)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoRaw))
+			Expect(connList.List[0].String()).To(Equal("raw 0.0.0.0:1 <-> 0.0.0.0:0"))
 		})
 
 		It("parses TCP IPv6", func() {
@@ -764,15 +774,18 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(128)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateTimeWait))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[0].String()).To(Equal("tcp ::1:40498 <-> ::1:2389"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
 			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
-
 			Expect(connList.List[1].LocalPort).To(Equal(uint64(2389)))
 			Expect(connList.List[1].RemotePort).To(Equal(uint64(40498)))
 			Expect(connList.List[1].SendQueue).To(Equal(uint64(7890)))
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateTimeWait))
+			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[1].String()).To(Equal("tcp ::1:2389 <-> ::1:40498"))
 		})
 
 		It("parses UDP IPv6", func() {
@@ -798,6 +811,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(128)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[0].String()).To(Equal("udp :::111 <-> :::0"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
 			Expect(connList.List[1].RemoteAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
@@ -806,6 +821,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].SendQueue).To(Equal(uint64(7890)))
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
+			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[1].String()).To(Equal("udp ::1:56457 <-> ::1:1001"))
 		})
 
 		It("parses raw IPv6", func() {
@@ -830,6 +847,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].SendQueue).To(Equal(uint64(0)))
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
+			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoRaw))
+			Expect(connList.List[0].String()).To(Equal("raw :::58 <-> :::0"))
 		})
 	})
 
