@@ -215,6 +215,10 @@ func (self *NetRawV6ConnList) Get() error {
 	return notImplemented()
 }
 
+func (self *ProcessList) Get() error {
+	return notImplemented()
+}
+
 func (self *ProcList) Get() error {
 	n := C.proc_listpids(C.PROC_ALL_PIDS, 0, nil, 0)
 	if n <= 0 {
@@ -248,6 +252,10 @@ func (self *ProcList) Get() error {
 }
 
 func (self *ProcState) Get(pid int) error {
+	return notImplemented()
+}
+
+func (self *ProcIo) Get(pid int) error {
 	return notImplemented()
 }
 

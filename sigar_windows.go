@@ -2,6 +2,12 @@
 
 package sigar
 
+import (
+	"time"
+
+	"github.com/scalingdata/wmi"
+)
+
 /*
 // We need both of these libraries to list network connections
 #cgo LDFLAGS: -liphlpapi -lws2_32
@@ -124,7 +130,13 @@ import (
 	"unsafe"
 )
 
+// Use package-global wmi client to avoid modifying wmi.DefaultClient
+var wmiClient = &wmi.Client{}
+
 func init() {
+	// WMI queries will set the zero value for struct items that can't be read,
+	// e.g. due to lack of permission
+	wmiClient.NonePtrZero = true
 }
 
 func (self *LoadAverage) Get() error {
@@ -295,28 +307,231 @@ func (self *DiskList) Get() error {
 	return nil
 }
 
+// Used by the wmi package to access the Win32_Process WMI class
+type Win32_Process struct {
+	Name            string
+	ProcessId       uint32
+	ExecutablePath  string // Requires SeDebugPrivilege, will not be present without this privilege
+	ExecutionState  uint16 // Requires SeDebugPrivilege, will not be present without this privilege
+	ParentProcessId uint32
+	Priority        uint32
+	CommandLine     string
+	CreationDate    time.Time
+
+	VirtualSize    uint64
+	WorkingSetSize uint64
+	PageFaults     uint32
+
+	UserModeTime   uint64
+	KernelModeTime uint64
+
+	ReadOperationCount  uint64
+	ReadTransferCount   uint64
+	WriteOperationCount uint64
+	WriteTransferCount  uint64
+}
+
+type WindowsRunState int
+
+const (
+	WindowsRunStateUnknown = WindowsRunState(iota)
+	WindowsRunStateOther
+	WindowsRunStateReady
+	WindowsRunStateRunning
+	WindowsRunStateBlocked
+	WindowsRunStateSuspendedBlocked
+	WindowsRunStateSuspendedReady
+	WindowsRunStateTerminated
+	WindowsRunStateStopped
+	WindowsRunStateGrowing
+)
+
+func convertWindowsRunState(state WindowsRunState) RunState {
+	// This mapping may not be exact, see "ExecutionState" at
+	// https://msdn.microsoft.com/en-us/library/aa387976(v=vs.85).aspx
+	switch WindowsRunState(state) {
+	case WindowsRunStateReady:
+	case WindowsRunStateRunning:
+		return RunStateRun
+	case WindowsRunStateBlocked:
+	case WindowsRunStateSuspendedBlocked:
+		return RunStateIdle
+	case WindowsRunStateTerminated:
+		return RunStateZombie
+	case WindowsRunStateStopped:
+		return RunStateStop
+	}
+	return RunStateUnknown
+}
+
+// Helper to convert 100 nanosecond units to milliseconds
+func convert100NsUnitsToMillis(value uint64) uint64 {
+	return value / 10000
+}
+
+func (self *ProcessList) Get() error {
+	var procs []Win32_Process
+	whereClause := ""
+	query := wmi.CreateQuery(&procs, whereClause)
+	err := wmiClient.Query(query, &procs)
+	if err != nil {
+		return err
+	}
+
+	processes := make([]Process, 0, len(procs))
+	for _, proc := range procs {
+		var process Process
+
+		// ProcState
+		process.ProcState.Name = proc.Name
+		process.ProcState.Pid = int(proc.ProcessId)
+		process.ProcState.Ppid = int(proc.ParentProcessId)
+		process.ProcState.Priority = int(proc.Priority)
+		process.ProcState.State = convertWindowsRunState(WindowsRunState(proc.ExecutionState))
+
+		// ProcIo
+		process.ProcIo.ReadBytes = proc.ReadTransferCount
+		process.ProcIo.ReadOps = proc.ReadOperationCount
+		process.ProcIo.WriteBytes = proc.WriteTransferCount
+		process.ProcIo.WriteOps = proc.WriteOperationCount
+
+		// ProcMem
+		process.ProcMem.Size = proc.VirtualSize
+		process.ProcMem.Resident = proc.WorkingSetSize
+		process.ProcMem.PageFaults = uint64(proc.PageFaults)
+
+		// ProcTime
+		process.ProcTime.User = convert100NsUnitsToMillis(proc.UserModeTime)
+		process.ProcTime.Sys = convert100NsUnitsToMillis(proc.KernelModeTime)
+		process.ProcTime.Total = process.ProcTime.User + process.ProcTime.Sys
+		// Convert proc.CreationDate to millis
+		process.ProcTime.StartTime = uint64(proc.CreationDate.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)))
+
+		// ProcArgs
+		process.ProcArgs.List = []string{proc.CommandLine}
+
+		// ProcExe - Cwd, Root not implemented
+		process.ProcExe.Name = proc.ExecutablePath
+
+		processes = append(processes, process)
+	}
+	self.List = processes
+	return nil
+}
+
 func (self *ProcList) Get() error {
-	return notImplemented()
+	var procs []Win32_Process
+	whereClause := ""
+	query := wmi.CreateQuery(&procs, whereClause)
+	err := wmiClient.Query(query, &procs)
+	if err != nil {
+		return err
+	}
+
+	pids := make([]int, 0, len(procs))
+	for _, proc := range procs {
+		pids = append(pids, int(proc.ProcessId))
+	}
+	self.List = pids
+	return nil
+}
+
+func getWmiWin32ProcessResult(pid int) (Win32_Process, error) {
+	var procs []Win32_Process
+	var proc Win32_Process
+
+	query := wmi.CreateQuery(&procs, fmt.Sprintf("WHERE ProcessId = %d", pid))
+	err := wmiClient.Query(query, &procs)
+	if err != nil {
+		return proc, err
+	}
+
+	if len(procs) == 0 {
+		return proc, fmt.Errorf("Couldn't find pid %d", pid)
+	}
+	if len(procs) != 1 {
+		// This shouldn't happen
+		return proc, fmt.Errorf("Expected single WMI result")
+	}
+	return procs[0], nil
 }
 
 func (self *ProcState) Get(pid int) error {
-	return notImplemented()
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.Name = proc.Name
+	self.Pid = int(proc.ProcessId)
+	self.Ppid = int(proc.ParentProcessId)
+	self.Priority = int(proc.Priority)
+	self.State = convertWindowsRunState(WindowsRunState(proc.ExecutionState))
+
+	return nil
+}
+
+func (self *ProcIo) Get(pid int) error {
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.ReadBytes = proc.ReadTransferCount
+	self.ReadOps = proc.ReadOperationCount
+	self.WriteBytes = proc.WriteTransferCount
+	self.WriteOps = proc.WriteOperationCount
+	return nil
 }
 
 func (self *ProcMem) Get(pid int) error {
-	return notImplemented()
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.Size = proc.VirtualSize
+	self.Resident = proc.WorkingSetSize
+	self.PageFaults = uint64(proc.PageFaults)
+
+	// Share, MinorFaults and MajorFaults are not available from the Win32_Process WMI class
+	return nil
 }
 
 func (self *ProcTime) Get(pid int) error {
-	return notImplemented()
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.User = convert100NsUnitsToMillis(proc.UserModeTime)
+	self.Sys = convert100NsUnitsToMillis(proc.KernelModeTime)
+	self.Total = self.User + self.Sys
+	self.Total = self.User + self.Sys
+
+	// Convert proc.CreationDate to millis
+	self.StartTime = uint64(proc.CreationDate.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)))
+	return nil
 }
 
 func (self *ProcArgs) Get(pid int) error {
-	return notImplemented()
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.List = []string{proc.CommandLine}
+	return nil
 }
 
 func (self *ProcExe) Get(pid int) error {
-	return notImplemented()
+	proc, err := getWmiWin32ProcessResult(pid)
+	if err != nil {
+		return err
+	}
+
+	self.Name = proc.ExecutablePath
+	return nil
 }
 
 func (self *FileSystemUsage) Get(path string) error {

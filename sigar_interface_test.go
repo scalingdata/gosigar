@@ -151,18 +151,28 @@ var _ = Describe("Sigar", func() {
 		}
 	})
 
+	It("full process list", func() {
+		processList := ProcessList{}
+		err := processList.Get()
+		if runtime.GOOS == "windows" {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(processList.List)).To(BeNumerically(">", 0))
+		} else {
+			Expect(err).To(Equal(ErrNotImplemented))
+		}
+	})
+
 	It("proc list", func() {
 		pids := ProcList{}
 		err := pids.Get()
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(pids.List)).To(BeNumerically(">", 2))
-		}
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(pids.List)).To(BeNumerically(">", 2))
+	})
 
-		err = pids.Get()
-		if runtime.GOOS == "windows" {
+	It("proc io", func() {
+		io := ProcIo{}
+		err := io.Get(os.Getppid())
+		if runtime.GOOS == "darwin" {
 			Expect(err).To(Equal(ErrNotImplemented))
 		} else {
 			Expect(err).ToNot(HaveOccurred())
@@ -172,16 +182,18 @@ var _ = Describe("Sigar", func() {
 	It("proc state", func() {
 		state := ProcState{}
 		err := state.Get(os.Getppid())
-		if runtime.GOOS == "linux" {
+		if runtime.GOOS != "darwin" {
 			Expect(err).ToNot(HaveOccurred())
-			Expect([]RunState{RunStateRun, RunStateSleep}).To(ContainElement(state.State))
-			Expect([]string{"go", "ginkgo"}).To(ContainElement(state.Name))
+			if runtime.GOOS == "linux" {
+				Expect([]RunState{RunStateRun, RunStateSleep}).To(ContainElement(state.State))
+			}
+			Expect([]string{"go", "go.exe", "ginkgo"}).To(ContainElement(state.Name))
 		} else {
 			Expect(err).To(Equal(ErrNotImplemented))
 		}
 
 		err = state.Get(invalidPid)
-		if runtime.GOOS == "linux" {
+		if runtime.GOOS != "darwin" {
 			Expect(err).To(HaveOccurred())
 		} else {
 			Expect(err).To(Equal(ErrNotImplemented))
@@ -191,58 +203,35 @@ var _ = Describe("Sigar", func() {
 	It("proc mem", func() {
 		mem := ProcMem{}
 		err := mem.Get(os.Getppid())
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-		}
+		Expect(err).ToNot(HaveOccurred())
 
 		err = mem.Get(invalidPid)
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).To(HaveOccurred())
-		}
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("proc time", func() {
 		time := ProcTime{}
 		err := time.Get(os.Getppid())
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-		}
+		Expect(err).ToNot(HaveOccurred())
+		Expect(time.User).To(BeNumerically(">", 0))
+		Expect(time.Sys).To(BeNumerically(">", 0))
 
 		err = time.Get(invalidPid)
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).To(HaveOccurred())
-		}
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("proc args", func() {
 		args := ProcArgs{}
 		err := args.Get(os.Getppid())
-
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(args.List)).To(BeNumerically(">=", 2))
-		}
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(args.List)).To(BeNumerically(">=", 1))
 	})
 
 	It("proc exe", func() {
 		exe := ProcExe{}
 		err := exe.Get(os.Getppid())
-		if runtime.GOOS == "windows" {
-			Expect(err).To(Equal(ErrNotImplemented))
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-			Expect([]string{"go", "ginkgo"}).To(ContainElement(filepath.Base(exe.Name)))
-		}
+		Expect(err).ToNot(HaveOccurred())
+		Expect([]string{"go", "go.exe", "ginkgo"}).To(ContainElement(filepath.Base(exe.Name)))
 	})
 
 	It("disk list", func() {

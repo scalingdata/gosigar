@@ -301,6 +301,19 @@ type NetRawV6ConnList struct {
 	List []NetConn
 }
 
+type ProcessList struct {
+	List []Process
+}
+
+type Process struct {
+	ProcState
+	ProcIo
+	ProcMem
+	ProcTime
+	ProcArgs
+	ProcExe
+}
+
 type ProcList struct {
 	List []int
 }
@@ -319,6 +332,7 @@ const (
 type ProcState struct {
 	Name      string
 	State     RunState
+	Pid       int
 	Ppid      int
 	Tty       int
 	Priority  int

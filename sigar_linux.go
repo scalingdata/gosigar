@@ -561,6 +561,10 @@ func (self *DiskList) Get() error {
 	return err
 }
 
+func (self *ProcessList) Get() error {
+	return notImplemented()
+}
+
 func (self *ProcList) Get() error {
 	dir, err := os.Open(Procd)
 	if err != nil {
@@ -892,4 +896,8 @@ func (self *SystemDistribution) Get() error {
 		}
 		return true
 	})
+}
+
+func notImplemented() error {
+	return ErrNotImplemented
 }
