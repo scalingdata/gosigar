@@ -154,7 +154,7 @@ var _ = Describe("Sigar", func() {
 	It("full process list", func() {
 		processList := ProcessList{}
 		err := processList.Get()
-		if runtime.GOOS == "windows" {
+		if runtime.GOOS != "darwin" {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(processList.List)).To(BeNumerically(">", 0))
 		} else {

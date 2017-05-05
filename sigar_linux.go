@@ -562,7 +562,29 @@ func (self *DiskList) Get() error {
 }
 
 func (self *ProcessList) Get() error {
-	return notImplemented()
+	pids := ProcList{}
+	err := pids.Get()
+	if err != nil {
+		return err
+	}
+
+	processes := make([]Process, 0, len(pids.List))
+	for _, pid := range pids.List {
+		var process Process
+
+		// Gather each composed struct, ignoring any errors.
+		_ = process.ProcState.Get(pid)
+		_ = process.ProcIo.Get(pid)
+		_ = process.ProcMem.Get(pid)
+		_ = process.ProcTime.Get(pid)
+		_ = process.ProcArgs.Get(pid)
+		_ = process.ProcExe.Get(pid)
+
+		processes = append(processes, process)
+	}
+
+	self.List = processes
+	return nil
 }
 
 func (self *ProcList) Get() error {
@@ -630,6 +652,8 @@ func (self *ProcState) Get(pid int) error {
 	self.Name = fields[1][1 : len(fields[1])-1] // strip ()'s
 
 	self.State = RunState(fields[2][0])
+
+	self.Pid = pid
 
 	self.Ppid, _ = strconv.Atoi(fields[3])
 

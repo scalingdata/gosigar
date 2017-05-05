@@ -983,6 +983,7 @@ DISTRIB_DESCRIPTION="Ubuntu 12.04.5 LTS"
 
 			Expect(procState.Name).To(Equal("watchdog/1"))
 			Expect(procState.State).To(Equal(sigar.RunState(sigar.RunStateSleep)))
+			Expect(procState.Pid).To(Equal(10))
 			Expect(procState.Ppid).To(Equal(int(2)))
 			Expect(procState.Tty).To(Equal(int(11)))
 			Expect(procState.Priority).To(Equal(int(-100)))
