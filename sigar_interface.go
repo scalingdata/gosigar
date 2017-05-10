@@ -272,7 +272,12 @@ func (self NetConn) String() string {
 	case ConnStateListen:
 		str = fmt.Sprintf("Listen %s %s:%d", self.Proto, self.LocalAddr, self.LocalPort)
 	default:
-		str = fmt.Sprintf("%s %s:%d <-> %s:%d", self.Proto, self.LocalAddr, self.LocalPort, self.RemoteAddr, self.RemotePort)
+		if self.RemoteAddr != nil {
+			str = fmt.Sprintf("%s %s:%d <-> %s:%d", self.Proto, self.LocalAddr, self.LocalPort, self.RemoteAddr, self.RemotePort)
+		} else {
+			// Some sockets (e.g. UDP) are technically not in the LISTEN state, but don't provide the remote address
+			str = fmt.Sprintf("%s %s:%d", self.Proto, self.LocalAddr, self.LocalPort)
+		}
 	}
 	return str
 }

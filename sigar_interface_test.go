@@ -1,6 +1,7 @@
 package sigar_test
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -254,6 +255,31 @@ var _ = Describe("Sigar", func() {
 		dist := SystemDistribution{}
 		err := dist.Get()
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("NetConn", func() {
+		tcpNetConn := NetConn{LocalAddr: net.ParseIP("1.2.3.4"),
+			RemoteAddr: net.ParseIP("2.3.4.5"),
+			LocalPort:  1234,
+			RemotePort: 2345,
+			Status:     ConnStateEstablished,
+			Proto:      ConnProtoTcp,
+		}
+		Expect(tcpNetConn.String()).To(Equal("tcp 1.2.3.4:1234 <-> 2.3.4.5:2345"))
+
+		listeningTcpConn := NetConn{LocalAddr: net.ParseIP("1.2.3.4"),
+			LocalPort: 1234,
+			Status:    ConnStateListen,
+			Proto:     ConnProtoTcp,
+		}
+		Expect(listeningTcpConn.String()).To(Equal("Listen tcp 1.2.3.4:1234"))
+
+		// udp connection with zero-value Status and RemoteAddr
+		udpNetConn := NetConn{LocalAddr: net.ParseIP("1.2.3.4"),
+			LocalPort: 1234,
+			Proto:     ConnProtoUdp,
+		}
+		Expect(udpNetConn.String()).To(Equal("udp 1.2.3.4:1234"))
 	})
 
 	It("returns NetConnState string", func() {
