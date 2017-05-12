@@ -770,24 +770,38 @@ func (self *NetRawV6ConnList) Get() error {
 }
 
 func (self *NetProtoV4Stats) Get() error {
+	// List of PDH counters to gather. PDH counters are retreived "raw", meaning that per-second
+	// counters are returned as monotonically increasing values despite their name
 	protoV4Queries := []string{
 		`\TCPv4\Connections Active`,
 		`\TCPv4\Connections Passive`,
 		`\TCPv4\Connection Failures`,
 		`\TCPv4\Connections Reset`,
 		`\TCPv4\Connections Established`,
+		`\TCPv4\Segments Received/sec`,
+		`\TCPv4\Segments Sent/sec`,
+		`\TCPv4\Segments Retransmitted/sec`,
 
+		`\UDPv4\Datagrams Received/sec`,
+		`\UDPv4\Datagrams Sent/sec`,
 		`\UDPv4\Datagrams Received Errors`,
+		`\UDPv4\Datagrams No Port/sec`,
 
+		`\IPv4\Datagrams Received/sec`,
 		`\IPv4\Datagrams Received Header Errors`,
 		`\IPv4\Datagrams Received Address Errors`,
+		`\IPv4\Datagrams Forwarded/sec`,
+		`\IPv4\Datagrams Received Delivered/sec`,
 		`\IPv4\Datagrams Received Discarded`,
 		`\IPv4\Datagrams Received Unknown Protocol`,
+		`\IPv4\Datagrams Sent/sec`,
 		`\IPv4\Datagrams Outbound Discarded`,
 		`\IPv4\Datagrams Outbound No Route`,
 
+		`\ICMP\Messages Received/sec`,
 		`\ICMP\Messages Received Errors`,
 		`\ICMP\Received Dest. Unreachable`,
+		`\ICMP\Messages Sent/sec`,
 		`\ICMP\Messages Outbound Errors`,
 		`\ICMP\Sent Destination Unreachable`,
 	}
@@ -805,18 +819,32 @@ func (self *NetProtoV4Stats) Get() error {
 	self.TCP.AttemptFails, results = uint64(results[0]), results[1:]
 	self.TCP.EstabResets, results = uint64(results[0]), results[1:]
 	self.TCP.CurrEstab, results = uint64(results[0]), results[1:]
+	self.TCP.InSegs, results = uint64(results[0]), results[1:]
+	self.TCP.OutSegs, results = uint64(results[0]), results[1:]
+	self.TCP.RetransSegs, results = uint64(results[0]), results[1:]
+	// InErrs, OutRsts not available from PDH counters
 
+	self.UDP.InDatagrams, results = uint64(results[0]), results[1:]
+	self.UDP.OutDatagrams, results = uint64(results[0]), results[1:]
 	self.UDP.InErrors, results = uint64(results[0]), results[1:]
+	self.UDP.NoPorts, results = uint64(results[0]), results[1:]
+	// RcvbufErrors, SndbufErrors not available from PDH counters
 
+	self.IP.InReceives, results = uint64(results[0]), results[1:]
 	self.IP.InHdrErrors, results = uint64(results[0]), results[1:]
 	self.IP.InAddrErrors, results = uint64(results[0]), results[1:]
+	self.IP.ForwDatagrams, results = uint64(results[0]), results[1:]
+	self.IP.InDelivers, results = uint64(results[0]), results[1:]
 	self.IP.InDiscards, results = uint64(results[0]), results[1:]
 	self.IP.InUnknownProtos, results = uint64(results[0]), results[1:]
+	self.IP.OutRequests, results = uint64(results[0]), results[1:]
 	self.IP.OutDiscards, results = uint64(results[0]), results[1:]
 	self.IP.OutNoRoutes, results = uint64(results[0]), results[1:]
 
+	self.ICMP.InMsgs, results = uint64(results[0]), results[1:]
 	self.ICMP.InErrors, results = uint64(results[0]), results[1:]
 	self.ICMP.InDestUnreachs, results = uint64(results[0]), results[1:]
+	self.ICMP.OutMsgs, results = uint64(results[0]), results[1:]
 	self.ICMP.OutErrors, results = uint64(results[0]), results[1:]
 	self.ICMP.OutDestUnreachs, results = uint64(results[0]), results[1:]
 
@@ -824,24 +852,38 @@ func (self *NetProtoV4Stats) Get() error {
 }
 
 func (self *NetProtoV6Stats) Get() error {
+	// List of PDH counters to gather. PDH counters are retreived "raw", meaning that per-second
+	// counters are returned as monotonically increasing values despite their name
 	protoV6Queries := []string{
 		`\TCPv6\Connections Active`,
 		`\TCPv6\Connections Passive`,
 		`\TCPv6\Connection Failures`,
 		`\TCPv6\Connections Reset`,
 		`\TCPv6\Connections Established`,
+		`\TCPv6\Segments Received/sec`,
+		`\TCPv6\Segments Sent/sec`,
+		`\TCPv6\Segments Retransmitted/sec`,
 
+		`\UDPv6\Datagrams Received/sec`,
+		`\UDPv6\Datagrams Sent/sec`,
 		`\UDPv6\Datagrams Received Errors`,
+		`\UDPv6\Datagrams No Port/sec`,
 
+		`\IPv6\Datagrams Received/sec`,
 		`\IPv6\Datagrams Received Header Errors`,
 		`\IPv6\Datagrams Received Address Errors`,
+		`\IPv6\Datagrams Forwarded/sec`,
+		`\IPv6\Datagrams Received Delivered/sec`,
 		`\IPv6\Datagrams Received Discarded`,
 		`\IPv6\Datagrams Received Unknown Protocol`,
+		`\IPv6\Datagrams Sent/sec`,
 		`\IPv6\Datagrams Outbound Discarded`,
 		`\IPv6\Datagrams Outbound No Route`,
 
+		`\ICMPv6\Messages Received/sec`,
 		`\ICMPv6\Messages Received Errors`,
 		`\ICMPv6\Received Dest. Unreachable`,
+		`\ICMPv6\Messages Sent/sec`,
 		`\ICMPv6\Messages Outbound Errors`,
 		`\ICMPv6\Sent Destination Unreachable`,
 	}
@@ -859,18 +901,32 @@ func (self *NetProtoV6Stats) Get() error {
 	self.TCP.AttemptFails, results = uint64(results[0]), results[1:]
 	self.TCP.EstabResets, results = uint64(results[0]), results[1:]
 	self.TCP.CurrEstab, results = uint64(results[0]), results[1:]
+	self.TCP.InSegs, results = uint64(results[0]), results[1:]
+	self.TCP.OutSegs, results = uint64(results[0]), results[1:]
+	self.TCP.RetransSegs, results = uint64(results[0]), results[1:]
+	// InErrs, OutRsts not available from PDH counters
 
+	self.UDP.InDatagrams, results = uint64(results[0]), results[1:]
+	self.UDP.OutDatagrams, results = uint64(results[0]), results[1:]
 	self.UDP.InErrors, results = uint64(results[0]), results[1:]
+	self.UDP.NoPorts, results = uint64(results[0]), results[1:]
+	// RcvbufErrors, SndbufErrors not available from PDH counters
 
+	self.IP.InReceives, results = uint64(results[0]), results[1:]
 	self.IP.InHdrErrors, results = uint64(results[0]), results[1:]
 	self.IP.InAddrErrors, results = uint64(results[0]), results[1:]
+	self.IP.ForwDatagrams, results = uint64(results[0]), results[1:]
+	self.IP.InDelivers, results = uint64(results[0]), results[1:]
 	self.IP.InDiscards, results = uint64(results[0]), results[1:]
 	self.IP.InUnknownProtos, results = uint64(results[0]), results[1:]
+	self.IP.OutRequests, results = uint64(results[0]), results[1:]
 	self.IP.OutDiscards, results = uint64(results[0]), results[1:]
 	self.IP.OutNoRoutes, results = uint64(results[0]), results[1:]
 
+	self.ICMP.InMsgs, results = uint64(results[0]), results[1:]
 	self.ICMP.InErrors, results = uint64(results[0]), results[1:]
 	self.ICMP.InDestUnreachs, results = uint64(results[0]), results[1:]
+	self.ICMP.OutMsgs, results = uint64(results[0]), results[1:]
 	self.ICMP.OutErrors, results = uint64(results[0]), results[1:]
 	self.ICMP.OutDestUnreachs, results = uint64(results[0]), results[1:]
 
