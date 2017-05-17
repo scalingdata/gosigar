@@ -5,6 +5,7 @@ package sigar
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var system struct {
@@ -705,6 +707,7 @@ func (self *ProcTime) Get(pid int) error {
 		return err
 	}
 
+	self.CollectionTime = time.Now()
 	fields := strings.Fields(string(contents))
 
 	user, _ := strtoull(fields[13])
@@ -719,6 +722,35 @@ func (self *ProcTime) Get(pid int) error {
 	self.StartTime /= system.ticks
 	self.StartTime += system.btime
 	self.StartTime *= 1000
+
+	return err
+}
+
+// Calculate percent of CPU usage by diffing counters. The "other" ProcTime should be from an earlier reading.
+func (self *ProcTime) CalculateCpuPercent(other *ProcTime) error {
+	// The diffs need to be protected against underflow
+	if other.User > self.User {
+		return errors.New("Failed to calculate PercentUserTime: operation would result in underflow")
+	}
+	if other.Sys > self.Sys {
+		return errors.New("Failed to calculate PercentSysTime: operation would result in underflow")
+	}
+	if other.CollectionTime.After(self.CollectionTime) {
+		return errors.New("'Other' ProcTime should be older than current")
+	}
+
+	diffUser := uint64(self.User - other.User)
+	diffSys := uint64(self.Sys - other.Sys)
+	diffMillis := uint64(self.CollectionTime.Sub(other.CollectionTime) / time.Millisecond)
+
+	if diffMillis == 0 {
+		return errors.New("Failed to determine elapsed millisecods: operation would result in divide by zero")
+	}
+
+	// Calculate percentages, multiplying by 100 first to avoid precision loss
+	self.PercentUserTime = (diffUser * 100) / diffMillis
+	self.PercentSysTime = (diffSys * 100) / diffMillis
+	self.PercentTotalTime = ((diffUser + diffSys) * 100) / diffMillis
 
 	return nil
 }

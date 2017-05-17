@@ -5,12 +5,26 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	. "github.com/scalingdata/ginkgo"
 	. "github.com/scalingdata/gomega"
 
 	. "github.com/scalingdata/gosigar"
 )
+
+func burnOneSecondCpu() int {
+	timer := time.NewTimer(time.Second)
+	var i int
+	for {
+		select {
+		case <-timer.C:
+			return i
+		default:
+			i++
+		}
+	}
+}
 
 var _ = Describe("Sigar", func() {
 	var invalidPid = 666666
@@ -211,13 +225,41 @@ var _ = Describe("Sigar", func() {
 	})
 
 	It("proc time", func() {
-		time := ProcTime{}
-		err := time.Get(os.Getppid())
+		// Measure parent process
+		timeParent := ProcTime{}
+		err := timeParent.Get(os.Getppid())
 		Expect(err).ToNot(HaveOccurred())
-		Expect(time.User).To(BeNumerically(">", 0))
-		Expect(time.Sys).To(BeNumerically(">", 0))
+		Expect(timeParent.User).To(BeNumerically(">", 0))
+		Expect(timeParent.Sys).To(BeNumerically(">", 0))
 
-		err = time.Get(invalidPid)
+		// Take snapshot of current process
+		time1 := ProcTime{}
+		err = time1.Get(os.Getpid())
+		Expect(err).ToNot(HaveOccurred())
+
+		// Use some CPU time
+		i := burnOneSecondCpu()
+		Expect(i).To(BeNumerically(">", 0)) // Assert on i to avoid compiler optimization
+
+		time2 := ProcTime{}
+		err = time2.Get(os.Getpid())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(time2.User).To(BeNumerically(">", 0))
+
+		err = time2.CalculateCpuPercent(&time1)
+		if runtime.GOOS == "darwin" {
+			Expect(err).To(Equal(ErrNotImplemented))
+		} else if runtime.GOOS == "windows" {
+			// Counters are not reliably updated on Windows during this time, assert only that no error occurred
+			Expect(err).ToNot(HaveOccurred())
+		} else {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(time2.PercentUserTime).To(BeNumerically(">", 0))
+			Expect(time2.PercentTotalTime).To(BeNumerically(">", 0))
+		}
+
+		invalidTime := ProcTime{}
+		err = invalidTime.Get(invalidPid)
 		Expect(err).To(HaveOccurred())
 	})
 

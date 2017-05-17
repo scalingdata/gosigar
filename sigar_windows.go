@@ -331,6 +331,15 @@ type Win32_Process struct {
 	WriteTransferCount  uint64
 }
 
+// Used by the WMI package
+type Win32_PerfFormattedData_PerfProc_Process struct {
+	IDProcess             uint32
+	PercentPrivilegedTime uint64
+	PercentUserTime       uint64
+	PercentProcessorTime  uint64
+	PageFileBytes         uint64
+}
+
 type WindowsRunState int
 
 const (
@@ -370,6 +379,7 @@ func convert100NsUnitsToMillis(value uint64) uint64 {
 }
 
 func (self *ProcessList) Get() error {
+	// Query process list
 	var procs []Win32_Process
 	whereClause := ""
 	query := wmi.CreateQuery(&procs, whereClause)
@@ -378,9 +388,26 @@ func (self *ProcessList) Get() error {
 		return err
 	}
 
+	// Query performance class to get percent user/sys time
+	var procPerfs []Win32_PerfFormattedData_PerfProc_Process
+	whereClause = ""
+	query = wmi.CreateQuery(&procPerfs, whereClause)
+	err = wmiClient.Query(query, &procPerfs)
+	if err != nil {
+		return err
+	}
+
+	// Index performance data by process ID for easy lookup
+	perfLookup := make(map[uint32]Win32_PerfFormattedData_PerfProc_Process)
+	for _, procPerf := range procPerfs {
+		perfLookup[procPerf.IDProcess] = procPerf
+	}
+
+	// Form list of returned Process structs
 	processes := make([]Process, 0, len(procs))
 	for _, proc := range procs {
 		var process Process
+		perf := perfLookup[proc.ProcessId]
 
 		// ProcState
 		process.ProcState.Name = proc.Name
@@ -399,6 +426,7 @@ func (self *ProcessList) Get() error {
 		process.ProcMem.Size = proc.VirtualSize
 		process.ProcMem.Resident = proc.WorkingSetSize
 		process.ProcMem.PageFaults = uint64(proc.PageFaults)
+		process.ProcMem.PageFileBytes = perf.PageFileBytes
 
 		// ProcTime
 		process.ProcTime.User = convert100NsUnitsToMillis(proc.UserModeTime)
@@ -406,6 +434,9 @@ func (self *ProcessList) Get() error {
 		process.ProcTime.Total = process.ProcTime.User + process.ProcTime.Sys
 		// Convert proc.CreationDate to millis
 		process.ProcTime.StartTime = uint64(proc.CreationDate.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)))
+		process.ProcTime.PercentUserTime = perf.PercentUserTime
+		process.ProcTime.PercentSysTime = perf.PercentPrivilegedTime
+		process.ProcTime.PercentTotalTime = perf.PercentProcessorTime
 
 		// ProcArgs
 		process.ProcArgs.List = []string{proc.CommandLine}
@@ -511,6 +542,11 @@ func (self *ProcTime) Get(pid int) error {
 
 	// Convert proc.CreationDate to millis
 	self.StartTime = uint64(proc.CreationDate.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)))
+	return nil
+}
+
+func (self *ProcTime) CalculateCpuPercent(other *ProcTime) error {
+	// CPU Percentage is already provided by Get()
 	return nil
 }
 

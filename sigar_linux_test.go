@@ -992,27 +992,54 @@ DISTRIB_DESCRIPTION="Ubuntu 12.04.5 LTS"
 		})
 
 		It("GetsProcessTime", func() {
-			statFile := procd + "/10/stat"
-			statLine := "10 (watchdog/1) S 2 0 0 11 -1 2216722752 0 0 0 0 100 142 0 0 -100 0 1 0 40000 240 160 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 1 99 1 0 0 0"
-			err := os.MkdirAll(procd+"/10/", 0777)
-			Expect(err).ToNot(HaveOccurred())
-			err = ioutil.WriteFile(statFile, []byte(statLine), 0444)
-			Expect(err).ToNot(HaveOccurred())
-			// Process start time is relative to system start time, we need to reset the system start time
-			bTimeFile := procd + "/stat"
-			bTimeContent := "btime: 0"
-			err = ioutil.WriteFile(bTimeFile, []byte(bTimeContent), 0444)
-			Expect(err).ToNot(HaveOccurred())
+			// Write cpu stats file /proc/stat
+			cpuFile := procd + "/stat"
+			cpuLine1 := "cpu 25 1 2 3 4 5 6 7\nbtime 1494680071"
+			err := ioutil.WriteFile(cpuFile, []byte(cpuLine1), 0644)
 			sigar.LoadStartTime()
 
-			procTime := &sigar.ProcTime{}
-			err = procTime.Get(10)
+			// Write statFile /proc/10/stat
+			statFile := procd + "/10/stat"
+			statLine := "10 (stress) R 25372 25372 10153 34819 25372 4202560 34 0 0 0 7238 16 0 0 20 0 1 0 29081667 6676480 50 18446744073709551615 4194304 4213484 140721323475968 140721323475512 140017284985275 0 0 0 0 0 0 0 17 0 0 0 0 0 0"
+			err = os.MkdirAll(procd+"/10/", 0777)
+			Expect(err).ToNot(HaveOccurred())
+			err = ioutil.WriteFile(statFile, []byte(statLine), 0644)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(procTime.User).To(Equal(uint64(1000)))
-			Expect(procTime.Sys).To(Equal(uint64(1420)))
-			Expect(procTime.Total).To(Equal(uint64(2420)))
-			Expect(procTime.StartTime).To(Equal(uint64(400000)))
+			procTime1 := &sigar.ProcTime{}
+			err = procTime1.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procTime1.User).To(Equal(uint64(72380)))
+			Expect(procTime1.Sys).To(Equal(uint64(160)))
+			Expect(procTime1.Total).To(Equal(uint64(72540)))
+			Expect(procTime1.StartTime).To(Equal(uint64(1494970887000)))
+
+			Expect(procTime1.PercentUserTime).To(Equal(uint64(0)))
+			Expect(procTime1.PercentSysTime).To(Equal(uint64(0)))
+			Expect(procTime1.PercentTotalTime).To(Equal(uint64(0)))
+
+			// Write updated version of statsFile
+			statLine2 := "10 (stress) R 25372 25372 10153 34819 25372 4202560 34 0 0 0 7337 17 0 0 20 0 1 0 29081667 6676480 50 18446744073709551615 4194304 4213484 140721323475968 140721323475512 140017284985305 0 0 0 0 0 0 0 17 0 0 0 0 0 0"
+			err = ioutil.WriteFile(statFile, []byte(statLine2), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			procTime2 := &sigar.ProcTime{}
+			err = procTime2.Get(10)
+			Expect(err).ToNot(HaveOccurred())
+
+			procTime2.CollectionTime = procTime1.CollectionTime.Add(time.Second) // Simulate passing of 1 second
+			err = procTime2.CalculateCpuPercent(procTime1)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(procTime2.User).To(Equal(uint64(73370)))
+			Expect(procTime2.Sys).To(Equal(uint64(170)))
+			Expect(procTime2.Total).To(Equal(uint64(73540)))
+			Expect(procTime2.StartTime).To(Equal(uint64(1494970887000)))
+
+			Expect(procTime2.PercentUserTime).To(Equal(uint64(99)))
+			Expect(procTime2.PercentSysTime).To(Equal(uint64(1)))
+			Expect(procTime2.PercentTotalTime).To(Equal(uint64(100)))
 		})
 
 		It("GetsProcessMemory", func() {

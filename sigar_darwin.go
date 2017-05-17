@@ -294,6 +294,10 @@ func (self *ProcTime) Get(pid int) error {
 	return nil
 }
 
+func (self *ProcTime) CalculateCpuPercent(other *ProcTime) error {
+	return notImplemented()
+}
+
 func (self *ProcArgs) Get(pid int) error {
 	var args []string
 

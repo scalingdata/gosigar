@@ -353,19 +353,26 @@ type ProcIo struct {
 }
 
 type ProcMem struct {
-	Size        uint64
-	Resident    uint64
-	Share       uint64
-	MinorFaults uint64
-	MajorFaults uint64
-	PageFaults  uint64
+	Size          uint64
+	Resident      uint64
+	Share         uint64
+	MinorFaults   uint64
+	MajorFaults   uint64
+	PageFaults    uint64
+	PageFileBytes uint64 // Currently only collected on Windows
 }
 
 type ProcTime struct {
-	StartTime uint64
-	User      uint64
-	Sys       uint64
-	Total     uint64
+	CollectionTime time.Time
+	StartTime      uint64 // Milliseconds since epoch
+	User           uint64 // User time in milliseconds
+	Sys            uint64 // System time in milliseconds
+	Total          uint64 // Total time in milliseconds
+
+	// Not valid until after CalculateCpuPercent()
+	PercentUserTime  uint64
+	PercentSysTime   uint64
+	PercentTotalTime uint64
 }
 
 type ProcArgs struct {
