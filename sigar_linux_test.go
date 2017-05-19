@@ -443,6 +443,26 @@ UdpLite: 0 0 0 0 0 0`
 			Expect(netStat.UDP.RcvbufErrors).To(Equal(uint64(99)))
 			Expect(netStat.UDP.SndbufErrors).To(Equal(uint64(88)))
 		})
+
+		It("reads IPs via ReadConnIp", func() {
+			// Localhost - 0100007F:43A1 -> 127.0.0.1:17313
+			ip, port, err := sigar.ReadConnIp("0100007F:43A1", 4)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ip.String()).To(Equal("127.0.0.1"))
+			Expect(port).To(Equal(uint64(17313)))
+
+			// High port - 0F02000A:B3DE -> 10.0.2.15:46046
+			ip, port, err = sigar.ReadConnIp("0F02000A:B3DE", 4)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ip.String()).To(Equal("10.0.2.15"))
+			Expect(port).To(Equal(uint64(46046)))
+
+			// Single IP byte higher than 127 - AA010A0A:2384 -> 10.10.1.170:9092
+			ip, port, err = sigar.ReadConnIp("AA010A0A:2384", 4)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ip.String()).To(Equal("10.10.1.170"))
+			Expect(port).To(Equal(uint64(9092)))
+		})
 	})
 
 	Describe("NetProtoV6", func() {

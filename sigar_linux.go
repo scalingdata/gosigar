@@ -414,12 +414,12 @@ func readConnList(listFile string, proto NetConnProto, ipSizeBytes, numFields in
 
 		var err error
 		var conn NetConn
-		conn.LocalAddr, conn.LocalPort, err = readConnIp(fields[1], ipSizeBytes)
+		conn.LocalAddr, conn.LocalPort, err = ReadConnIp(fields[1], ipSizeBytes)
 		if err != nil {
 			return true
 		}
 
-		conn.RemoteAddr, conn.RemotePort, err = readConnIp(fields[2], ipSizeBytes)
+		conn.RemoteAddr, conn.RemotePort, err = ReadConnIp(fields[2], ipSizeBytes)
 		if err != nil {
 			return true
 		}
@@ -455,7 +455,7 @@ func readConnList(listFile string, proto NetConnProto, ipSizeBytes, numFields in
 
 /* Decode an IP:port pair, with either a 16 or 4-byte address and 2-byte port,
    both hex-encoded. TODO: Test on a big-endian architecture. */
-func readConnIp(field string, lenBytes int) (net.IP, uint64, error) {
+func ReadConnIp(field string, lenBytes int) (net.IP, uint64, error) {
 	parts := strings.Split(field, ":")
 	if len(parts) != 2 {
 		return nil, 0, fmt.Errorf("Unable to split into IP and port")
@@ -475,7 +475,7 @@ func readConnIp(field string, lenBytes int) (net.IP, uint64, error) {
 	// The 32-bit words are in order, but the words themselves are little-endian
 	for i := 0; i < lenBytes; i += 4 {
 		for j := 0; j < 4; j++ {
-			byteVal, err := strconv.ParseInt(parts[0][(j+i)*2:(j+i+1)*2], 16, 8)
+			byteVal, err := strconv.ParseUint(parts[0][(j+i)*2:(j+i+1)*2], 16, 8)
 			if err != nil {
 				return nil, 0, fmt.Errorf("Unable to parse IP, %v - %v", parts[0], err)
 			}
