@@ -256,14 +256,16 @@ func (self NetConnState) String() string {
 }
 
 type NetConn struct {
-	LocalAddr  net.IP
-	RemoteAddr net.IP
-	LocalPort  uint64
-	RemotePort uint64
-	SendQueue  uint64
-	RecvQueue  uint64
-	Status     NetConnState
-	Proto      NetConnProto
+	LocalAddr   net.IP
+	RemoteAddr  net.IP
+	LocalPort   uint64
+	RemotePort  uint64
+	SendQueue   uint64
+	RecvQueue   uint64
+	Status      NetConnState
+	Proto       NetConnProto
+	Pid         int
+	ProcessName string
 }
 
 func (self NetConn) String() string {
