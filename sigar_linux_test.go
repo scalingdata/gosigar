@@ -695,6 +695,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateListen))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[0].Inode).To(Equal(uint64(12095)))
 			Expect(connList.List[0].String()).To(Equal("Listen tcp 0.0.0.0:22"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
@@ -705,6 +706,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
 			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[1].Inode).To(Equal(uint64(95158)))
 			Expect(connList.List[1].String()).To(Equal("tcp 10.0.2.15:22 <-> 10.0.2.2:59276"))
 		})
 
@@ -732,6 +734,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(123)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[0].Inode).To(Equal(uint64(180235)))
 			Expect(connList.List[0].String()).To(Equal("udp 0.0.0.0:68 <-> 0.0.0.0:0"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{10, 0, 2, 15}))
@@ -742,6 +745,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateClose))
 			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[1].Inode).To(Equal(uint64(11060)))
 			Expect(connList.List[1].String()).To(Equal("udp 10.0.2.15:111 <-> 0.0.0.0:0"))
 		})
 
@@ -768,6 +772,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(540)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoRaw))
+			Expect(connList.List[0].Inode).To(Equal(uint64(201340)))
 			Expect(connList.List[0].String()).To(Equal("raw 0.0.0.0:1 <-> 0.0.0.0:0"))
 		})
 
@@ -775,8 +780,8 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			connFile := procd + "/net/tcp6"
 			connFileContents := `
 sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
-   2: 00000000000000000000000001000000:9E32 00000000000000000000000001000000:0955 06 00000128:00000512 03:000015ED 00000000     0        0 0 3 ffff88029741cd00 99 0 0 2 -1
-   3: 00000000000000000000000001000000:0955 00000000000000000000000001000000:9E32 06 00007890:00000111 03:000015ED 00000000     0        0 0 3 ffff88029741ce40 99 0 0 2 -1
+   2: 00000000000000000000000001000000:9E32 00000000000000000000000001000000:0955 06 00000128:00000512 03:000015ED 00000000     0        0 10750 3 ffff88029741cd00 99 0 0 2 -1
+   3: 00000000000000000000000001000000:0955 00000000000000000000000001000000:9E32 06 00007890:00000111 03:000015ED 00000000     0        0 10847 3 ffff88029741ce40 99 0 0 2 -1
 `
 			err := os.MkdirAll(procd+"/net", 0777)
 			Expect(err).ToNot(HaveOccurred())
@@ -795,6 +800,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateTimeWait))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[0].Inode).To(Equal(uint64(10750)))
 			Expect(connList.List[0].String()).To(Equal("tcp ::1:40498 <-> ::1:2389"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
@@ -805,6 +811,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateTimeWait))
 			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoTcp))
+			Expect(connList.List[1].Inode).To(Equal(uint64(10847)))
 			Expect(connList.List[1].String()).To(Equal("tcp ::1:2389 <-> ::1:40498"))
 		})
 
@@ -832,6 +839,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(512)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[0].Inode).To(Equal(uint64(11065)))
 			Expect(connList.List[0].String()).To(Equal("udp :::111 <-> :::0"))
 
 			Expect(connList.List[1].LocalAddr).To(Equal(net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}))
@@ -842,6 +850,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[1].RecvQueue).To(Equal(uint64(111)))
 			Expect(connList.List[1].Status).To(Equal(sigar.ConnStateEstablished))
 			Expect(connList.List[1].Proto).To(Equal(sigar.ConnProtoUdp))
+			Expect(connList.List[1].Inode).To(Equal(uint64(203648)))
 			Expect(connList.List[1].String()).To(Equal("udp ::1:56457 <-> ::1:1001"))
 		})
 
@@ -868,6 +877,7 @@ sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid 
 			Expect(connList.List[0].RecvQueue).To(Equal(uint64(0)))
 			Expect(connList.List[0].Status).To(Equal(sigar.ConnStateClose))
 			Expect(connList.List[0].Proto).To(Equal(sigar.ConnProtoRaw))
+			Expect(connList.List[0].Inode).To(Equal(uint64(201786)))
 			Expect(connList.List[0].String()).To(Equal("raw :::58 <-> :::0"))
 		})
 	})

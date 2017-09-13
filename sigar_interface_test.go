@@ -308,6 +308,9 @@ var _ = Describe("Sigar", func() {
 			Proto:      ConnProtoTcp,
 		}
 		Expect(tcpNetConn.String()).To(Equal("tcp 1.2.3.4:1234 <-> 2.3.4.5:2345"))
+		tcpNetConn.Pid = 123
+		tcpNetConn.ProcessName = "test"
+		Expect(tcpNetConn.String()).To(Equal("tcp 1.2.3.4:1234 <-> 2.3.4.5:2345 by pid 123/test"))
 
 		listeningTcpConn := NetConn{LocalAddr: net.ParseIP("1.2.3.4"),
 			LocalPort: 1234,
@@ -315,6 +318,9 @@ var _ = Describe("Sigar", func() {
 			Proto:     ConnProtoTcp,
 		}
 		Expect(listeningTcpConn.String()).To(Equal("Listen tcp 1.2.3.4:1234"))
+		listeningTcpConn.Pid = 123
+		listeningTcpConn.ProcessName = "test"
+		Expect(listeningTcpConn.String()).To(Equal("Listen tcp 1.2.3.4:1234 by pid 123/test"))
 
 		// udp connection with zero-value Status and RemoteAddr
 		udpNetConn := NetConn{LocalAddr: net.ParseIP("1.2.3.4"),
@@ -322,6 +328,8 @@ var _ = Describe("Sigar", func() {
 			Proto:     ConnProtoUdp,
 		}
 		Expect(udpNetConn.String()).To(Equal("udp 1.2.3.4:1234"))
+		udpNetConn.Pid = 123
+		Expect(udpNetConn.String()).To(Equal("udp 1.2.3.4:1234 by pid 123"))
 	})
 
 	It("returns NetConnState string", func() {
